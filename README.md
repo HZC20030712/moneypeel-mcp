@@ -73,12 +73,12 @@ to pick, and how to cite a number without misquoting it.
 - **Code, scripts, configuration in this repository: MIT** (see [LICENSE](LICENSE)).
 - **Data returned by the server is not part of this repository** and is not
   licensed by it. The ranking dataset published separately is CC BY 4.0:
-  [moneypeel-rankings](https://github.com/moneypeel/moneypeel-rankings).
+  [moneypeel-rankings](https://github.com/HZC20030712/moneypeel-rankings).
 
 ## Related
 
 - Site: https://moneypeel.com
-- Ranking dataset (CC BY 4.0): https://github.com/moneypeel/moneypeel-rankings
+- Ranking dataset (CC BY 4.0): https://github.com/HZC20030712/moneypeel-rankings
 - Quickstart page: https://moneypeel.com/mcp-quickstart
 
 ---
@@ -101,4 +101,4 @@ MoneyPeel MCP 服务器的**开放接入套件**。远端 MCP 服务，回答「
 各客户端步骤见 [`clients/`](clients/)，链接与配置片段用
 `node scripts/install-links.mjs` 生成。
 
-数据仓（CC BY 4.0）：https://github.com/moneypeel/moneypeel-rankings
+数据仓（CC BY 4.0）：https://github.com/HZC20030712/moneypeel-rankings

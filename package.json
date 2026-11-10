@@ -10,6 +10,6 @@
     "links:prod": "node scripts/install-links.mjs --base https://moneypeel.com"
   },
   "keywords": ["mcp", "model-context-protocol", "oauth", "saas", "revenue", "market-research"],
-  "repository": { "type": "git", "url": "https://github.com/moneypeel/moneypeel-mcp" },
+  "repository": { "type": "git", "url": "https://github.com/HZC20030712/moneypeel-mcp" },
   "homepage": "https://moneypeel.com/mcp-quickstart"
 }

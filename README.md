@@ -17,8 +17,16 @@ reviewer or another agent needs to check.
 [![auth: OAuth 2.1](https://img.shields.io/badge/auth-OAuth_2.1-0e7490)](https://moneypeel.com/auth.md)
 [![api key: none](https://img.shields.io/badge/api_key-none-15803d)](https://moneypeel.com/auth.md)
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-lightgrey)](LICENSE)
+[![server: 1.2.0](https://img.shields.io/badge/server-1.2.0-1f2937)](https://moneypeel.com/.well-known/mcp/release.json)
+[![basis rules: 2026-11-10.1](https://img.shields.io/badge/basis_rules-2026--11--10.1-6b7280)](https://moneypeel.com/method)
 
 **English** · [简体中文](#中文)
+
+> **Synced with server `1.2.0` / economic-basis rules `2026-11-10.1`** (2026-11-10).
+> When the server's contract changes, this kit and the dataset READMEs have to change
+> with it — the list of files and the check order lives in
+> `MCP 增长数据开源计划/07-开源同步清单.md` on the site repo. If the two badges above
+> are older than `release.json`, this kit is stale.
 
 ---
 
@@ -128,6 +136,14 @@ not retry.
   sales, one-time sales, unknown).
 - **`dataQuality` is per row.** When it is `needs_review`, the 30-day amount and
   the MRR disagree by an order of magnitude — say so before quoting.
+- **`basisDetermination` says how we know it.** `human_reviewed` = a person read the
+  captured monetisation description; `pricing_model_inferred` = derived from the
+  public pricing model, never to be described as verified; `provider_line_item_verified`
+  = a provider line item settled it (no row carries it yet); `unknown` = nothing did.
+  `basisConfidence` follows from it and is never `high` for an inference.
+- **Refunds and tax are unknown.** `refundTreatment` / `taxTreatment` are `unknown` on
+  every row and `sourceAdjustmentKnowledge` records that the provider's field
+  definition has not been read. Do not call a figure net.
 - **Never derive a recurring/one-off split** from MRR ÷ 30-day amount. It is a
   coverage indicator, not an accounting split. Return "not available".
 
@@ -209,6 +225,6 @@ MoneyPeel 是一个远端 MCP 服务，收录 700+ 家小型软件产品的结�
 各客户端步骤见 [`clients/`](clients/)，链接与配置片段用
 `node scripts/install-links.mjs` 生成。
 
-**引用的三条铁律**：数字必须带日期；收入不等于利润（看 `revenueBasis`）；`dataQuality` 是 `needs_review` 时先说明原因再引用。
+**引用时的四条铁律**：数字必须带日期；收入不等于利润（看 `revenueBasis`）；`basisDetermination` 说这是人工读过还是按收费模式推断（推断不许说成已核实，置信度也不会是 `high`）；退款与税费每行都是 `unknown`——「未披露」不等于「未扣除」，不要把金额说成净额。`dataQuality` 是 `needs_review` 时先说明原因再引用。
 
 数据仓（CC BY 4.0）：https://github.com/HZC20030712/moneypeel-rankings

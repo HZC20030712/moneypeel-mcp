@@ -54,6 +54,20 @@ are free and do not spend a read.
   subscription charges, usage charges, service billings, platform fees, GMV,
   gross payment volume, merchant sales, one-time sales, or unknown. When
   `basisSource` is `unclassified`, call it a provider-reported amount.
+- **Say how we know it.** `basisDetermination` is `human_reviewed` (a person read
+  the captured monetisation description), `pricing_model_inferred` (derived from
+  the public pricing model — **never** describe it as verified or checked),
+  `provider_line_item_verified` (a provider line item settled it; no row carries
+  it yet), or `unknown`. `basisConfidence` follows from it and is never `high`
+  for an inference. Most rows are inferred; say so when the user is about to
+  treat a figure as audited.
+- **Refunds and tax are unknown, not "net".** `refundTreatment` and
+  `taxTreatment` are `unknown` on every row, and `sourceAdjustmentKnowledge`
+  says whether the provider's own field definition was read (it has not been).
+  "Not disclosed" is not "not deducted" — do not tell the user a figure is net.
+- **Text and structured data agree.** Each row's text form already carries the
+  amount, the basis and the determination; if your client renders only text, you
+  still have them. Do not re-derive a basis from `businessModel`.
 - **Check `dataQuality`.** When `status` is `needs_review`, say why before
   quoting: the 30-day amount and the MRR disagree by an order of magnitude.
 - **Never derive a recurring/one-off split** from MRR ÷ 30-day amount. It is a

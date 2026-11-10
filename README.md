@@ -79,6 +79,7 @@ to pick, and how to cite a number without misquoting it.
 
 - Site: https://moneypeel.com
 - Ranking dataset (CC BY 4.0): https://github.com/HZC20030712/moneypeel-rankings
+- Auth walkthrough, mirrored for readers: [docs/auth.md](docs/auth.md)
 - Quickstart page: https://moneypeel.com/mcp-quickstart
 
 ---

@@ -1,6 +1,6 @@
 ---
 name: moneypeel-revenue-research
-description: Look up verified revenue, MRR, growth and acquisition channels for 700+ small software products, and read a full teardown of any one of them. Use when the question is "how much does X make", "what does X's growth look like", "compare X and Y", or "what can I copy from X". Connects over MCP with OAuth — no API key.
+description: Look up provider-reported revenue signals, MRR, growth and acquisition channels for 700+ small software products, compare them, rank their 7-day or 30-day moves, and read a full teardown of any one of them. Use when the question is "how much does X make", "what does X's growth look like", "compare X and Y", or "what can I copy from X". Connects over MCP with OAuth 2.1 (no REST API key; header-only clients can use a connection credential).
 ---
 
 # MoneyPeel revenue research
@@ -25,24 +25,37 @@ claims and the server says so in its instructions.
 ## Connect
 
 - Endpoint: `https://moneypeel.com/mcp` (Streamable HTTP)
-- Auth: OAuth 2.1 + PKCE. There is **no API key**. A call that needs an account
-  answers `401` with a `WWW-Authenticate` challenge; follow it, let the user
-  sign in once in the browser, and keep the token.
+- Auth: OAuth 2.1 + PKCE. There is **no REST API key**; a client that can only
+  send a fixed header may use a connection credential (`Authorization: Bearer
+  mp_…`, issued on the connections page, accepted on `/mcp` only). A call that
+  needs an account answers `401` with a `WWW-Authenticate` challenge; follow it,
+  let the user sign in once in the browser, and keep the token.
 - Server card: `https://moneypeel.com/.well-known/mcp/server-card.json`
 - Detail: `https://moneypeel.com/auth.md`
 
 ## Which tool
 
 1. `search_reports` — always start here. Free, no account. It returns the
-   revenue figure, its own date, the pricing model, a quality flag, and a link.
+   revenue figure, its own date, the pricing model, evidence labels, a quality
+   flag, and a link. Structured filters: `market`, `businessModel`, MRR / 30-day
+   bounds, `revenueFreshness`, `economicBasis`, `basisDetermination`,
+   `dataQualityStatus`, `evidenceType`; `sortBy` takes `revenue`, `mrr`,
+   `name`, `growth` or `economicBasis` (`growthWindow` 7d / 30d). There is no
+   category or growth-rate parameter — do not invent one.
 2. `list_reports` — browse when the user has no name in mind.
-3. `get_report` — only when the user wants the teardown, or the summary is not
+3. `search_growth_signals` — free. Ranks 7d / 30d moves on one metric (`mrr` or
+   `revenue_30d`) and returns the base amount with every percentage, so a growth
+   number can never travel alone.
+4. `compare_companies` — free. 2–5 slugs, cell by cell, each marked
+   `comparable` / `partial` / `not_available` / `different_basis`. Amounts from
+   mixed economic bases are never ranked.
+5. `get_report` — only when the user wants the teardown, or the summary is not
    enough to answer. **It costs one read** (a single chapter costs the same), and
    free accounts have 2 per UTC month. Do not read a report you will not use.
-4. `get_usage` — free; returns plan, reads used, and the reset date.
+6. `get_usage` — free; returns plan, reads used, and the reset date.
 
-Prompts: `report_brief` for one product, `compare_products` for several. Both
-are free and do not spend a read.
+Prompts: `report_brief` (one product), `compare_products` (several),
+`find_ideas`, `find_growers`, `category_scan`. All are free.
 
 ## Quoting rules
 
@@ -70,6 +83,18 @@ are free and do not spend a read.
   still have them. Do not re-derive a basis from `businessModel`.
 - **Check `dataQuality`.** When `status` is `needs_review`, say why before
   quoting: the 30-day amount and the MRR disagree by an order of magnitude.
+- **Metric evidence and report evidence are different axes.**
+  `mrrEvidenceType` / `revenue30dEvidenceType` are `provider_reported` only
+  when the source stamped a sync time and named the payment provider; anything
+  else is `unknown`. `source.reportEvidence` describes how the report body was
+  written (its own marked claims) and never upgrades a metric-level label.
+- **Quote MRR from `displayMrr`.** When it is `null`, MRR is not a meaningful
+  measure for that business model: say that instead of reporting the raw `mrr`.
+- **`citation.capturedAt` is a real capture time or `null`.** Never substitute
+  the review date or invent one.
+- **Stale is not current.** `revenueEligibleForRanking` false / `revenueFreshness`
+  "stale" means the amount may still be quoted as a historical, dated figure but
+  not as current and not compared with a current one.
 - **Never derive a recurring/one-off split** from MRR ÷ 30-day amount. It is a
   coverage indicator, not an accounting split. Say "not available" instead.
 - **Link the source.** Every row carries a public preview URL and a metered

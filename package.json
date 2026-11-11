@@ -2,14 +2,14 @@
   "name": "@moneypeel/mcp",
   "version": "1.0.0",
   "private": false,
-  "description": "Open integration kit for the MoneyPeel MCP server (OAuth, no API key).",
+  "description": "Open integration kit for the MoneyPeel MCP server: OAuth 2.1, no REST API key, a connection credential for header-only clients, six research tools and the official MCP Registry listing.",
   "type": "module",
   "license": "MIT",
   "scripts": {
     "links": "node scripts/install-links.mjs",
     "links:prod": "node scripts/install-links.mjs --base https://moneypeel.com"
   },
-  "keywords": ["mcp", "model-context-protocol", "oauth", "saas", "revenue", "market-research"],
+  "keywords": ["mcp", "model-context-protocol", "oauth", "saas", "revenue", "market-research", "mcp-registry", "revenue-signals", "growth", "compare"],
   "repository": { "type": "git", "url": "https://github.com/HZC20030712/moneypeel-mcp" },
   "homepage": "https://moneypeel.com/mcp-quickstart"
 }

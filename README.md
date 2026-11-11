@@ -15,14 +15,15 @@ reviewer or another agent needs to check.
 
 [![mcp: remote](https://img.shields.io/badge/mcp-remote-1f2937)](https://moneypeel.com/mcp-quickstart)
 [![auth: OAuth 2.1](https://img.shields.io/badge/auth-OAuth_2.1-0e7490)](https://moneypeel.com/auth.md)
-[![api key: none](https://img.shields.io/badge/api_key-none-15803d)](https://moneypeel.com/auth.md)
+[![REST API key: none](https://img.shields.io/badge/REST_API_key-none-15803d)](https://moneypeel.com/auth.md)
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-lightgrey)](LICENSE)
-[![server: 1.2.0](https://img.shields.io/badge/server-1.2.0-1f2937)](https://moneypeel.com/.well-known/mcp/release.json)
+[![server: 1.4.0](https://img.shields.io/badge/server-1.4.0-1f2937)](https://moneypeel.com/.well-known/mcp/release.json)
+[![registry: published](https://img.shields.io/badge/registry-com.moneypeel%2Freports-0e7490)](https://registry.modelcontextprotocol.io/v0.1/servers?search=com.moneypeel%2Freports)
 [![basis rules: 2026-11-10.1](https://img.shields.io/badge/basis_rules-2026--11--10.1-6b7280)](https://moneypeel.com/method)
 
 **English** · [简体中文](#中文)
 
-> **Synced with server `1.2.0` / economic-basis rules `2026-11-10.1`** (2026-11-10).
+> **Synced with server `1.4.0` / economic-basis rules `2026-11-10.1`** (2026-11-11).
 > When the server's contract changes, this kit and the dataset READMEs have to change
 > with it — the list of files and the check order lives in
 > `MCP 增长数据开源计划/07-开源同步清单.md` on the site repo. If the two badges above
@@ -34,8 +35,10 @@ reviewer or another agent needs to check.
 
 | Tool | Account | Cost | Returns |
 |---|---|---|---|
-| `search_reports` | no | free | summary rows: revenue, MRR, growth, pricing model, data date, preview + full-report URLs |
+| `search_reports` | no | free | summary rows: revenue, MRR, growth, pricing model, data date, evidence labels, preview + full-report URLs |
 | `list_reports` | no | free | the same rows, paged and filterable |
+| `search_growth_signals` | no | free | 7d / 30d moves on one metric: baseline, absolute change, percentage, data points, window dates, methodology |
+| `compare_companies` | no | free | 2–5 products cell by cell, each `comparable` / `partial` / `not_available` / `different_basis` |
 | `get_report` | yes | **1 read** | one full report, or a single chapter |
 | `get_usage` | yes | free | plan, reads used this UTC month, reset date |
 
@@ -43,8 +46,9 @@ Free accounts get **2 full-report reads per UTC month**. Search and listing neve
 cost anything and never need an account — that is deliberate: an agent should be
 able to find out whether we have the answer before anyone signs in.
 
-Two prompts ship with the server: `report_brief` (one product, one teardown) and
-`compare_products` (two or more, side by side). Both are free.
+Five prompts ship with the server: `report_brief` (one product, one teardown),
+`compare_products` (two or more, side by side), `find_ideas`, `find_growers`
+and `category_scan`. All are free.
 
 ## Endpoint
 
@@ -55,10 +59,15 @@ Two prompts ship with the server: `report_brief` (one product, one teardown) and
 | Auth | OAuth 2.1 + PKCE (discovered from a `401` challenge) |
 | Server card | `https://moneypeel.com/.well-known/mcp/server-card.json` |
 | Agent auth doc | `https://moneypeel.com/auth.md` |
+| Registry listing | `com.moneypeel/reports` on the [official MCP Registry](https://registry.modelcontextprotocol.io/v0.1/servers?search=com.moneypeel%2Freports) |
 | Humans | `https://moneypeel.com/mcp-quickstart` |
 
-There is **no API key**. Nothing to copy, nothing to paste. If a document tells
-you to send an API key, that document is out of date.
+There is **no REST API key**: `/api/v1/*` answers 404. A client that can only
+send a fixed header may use a **connection credential** (`Authorization: Bearer
+mp_…`) issued on the connections page — it is accepted on `/mcp` only and
+carries the same account, allowance and revocation as OAuth. An OAuth client
+never pastes anything. If a document tells you to send any other key, that
+document is out of date.
 
 ## Install
 
@@ -68,7 +77,7 @@ you to send an API key, that document is out of date.
 | **Codex** | `codex mcp add moneypeel --url https://moneypeel.com/mcp` | CLI | then `codex mcp login moneypeel` |
 | **Cursor** | [install deeplink](clients/cursor.md) | **yes** | `cursor://…/mcp/install?name=…&config=…` |
 | **Claude web / Desktop** | Settings → Connectors → Add custom connector | no | Anthropic has no prefill link for custom connectors |
-| **ChatGPT** | Settings → Connectors → Create (Developer mode) | no | authentication: OAuth, leave client id/secret empty |
+| **ChatGPT** | Settings → Connectors → Create (Developer mode) | no | authentication: OAuth, leave client id/secret empty; directory submission is in progress, so use Developer mode until it is listed |
 | **VS Code / Copilot** | `.vscode/mcp.json` | unverified | see the caveat in [clients/vscode.md](clients/vscode.md) |
 | **Anything else** | Streamable HTTP + OAuth | — | [clients/other.md](clients/other.md) |
 
@@ -100,10 +109,16 @@ search_reports { "query": "postiz", "limit": 3 }
 > which social media schedulers make real money?
 
 ```
-compare_products { "products": "postiz, chatbase" }
+compare_companies { "slugs": ["postiz", "chatbase"] }
 ```
 
 > compare a $100K+ open-source scheduler with a $100K+ AI chatbot
+
+```
+search_growth_signals { "metric": "revenue_30d", "window": "30d", "minBaseline": 1000, "sort": "absolute", "limit": 5 }
+```
+
+> who added the most 30-day amount in the last month, with base and percentage
 
 ```
 get_report { "slug": "postiz", "chapter": 2 }
@@ -144,6 +159,26 @@ not retry.
 - **Refunds and tax are unknown.** `refundTreatment` / `taxTreatment` are `unknown` on
   every row and `sourceAdjustmentKnowledge` records that the provider's field
   definition has not been read. Do not call a figure net.
+- **Evidence is two-level, and the levels never merge.** `mrrEvidenceType` /
+  `revenue30dEvidenceType` are `provider_reported` only when the source stamped
+  a sync time and named the payment provider; anything else is `unknown`. The
+  report-level `source.reportEvidence` describes how the report body was
+  written (the distribution of its own marked claims) and **never** upgrades a
+  metric-level label.
+- **Quote MRR from `displayMrr`.** It is `null` when MRR is not a meaningful
+  measure for that business model; the raw `mrr` is kept for transparency and
+  must not be quoted as a run-rate.
+- **`citation.capturedAt` is the real capture time** of the cited source, or
+  `null` when no capture time was recorded. Do not substitute the review date.
+- **Stale rows stay readable but are not current.** `revenueEligibleForRanking`
+  false / `revenueFreshness` "stale" means the amount must not be quoted as a
+  current figure or compared with a current one.
+- **Filters and sorting are fixed.** `search_reports` accepts text plus
+  `businessModel`, `market`, MRR / 30-day bounds, `revenueFreshness`,
+  `economicBasis`, `basisDetermination`, `dataQualityStatus`, `evidenceType`,
+  and sorts by `revenue`, `mrr`, `name`, `growth` or `economicBasis`
+  (`growthWindow` 7d/30d). There is no category or growth-rate parameter; do
+  not invent one.
 - **Never derive a recurring/one-off split** from MRR ÷ 30-day amount. It is a
   coverage indicator, not an accounting split. Return "not available".
 
@@ -169,9 +204,11 @@ web.
 No. `/api/v1` answers `404` by design. The only surface is `/mcp`.
 
 **Do you support clients without OAuth?**
-No. There is no key path, and we do not intend to add one: a key in a config file
-is a secret the user has to manage, and this whole integration exists so they
-never have to.
+Only in the narrow sense that a client which cannot run a browser flow may send
+a **connection credential** (`Authorization: Bearer mp_…`) issued on the
+connections page. It is not a REST API key, it works on `/mcp` only, and it
+carries the same account, allowance and revocation as OAuth. There is still no
+REST surface and no key to paste into a generic "API key" field.
 
 **Can I self-host it?**
 No — the data is the product. The integration kit here is MIT; the server and the
@@ -194,6 +231,7 @@ SKILL.md            what an agent reads before calling
 
 - Site: https://moneypeel.com
 - Open dataset (CC BY 4.0): https://github.com/HZC20030712/moneypeel-rankings
+- MCP Registry: `com.moneypeel/reports` — https://registry.modelcontextprotocol.io/v0.1/servers?search=com.moneypeel%2Freports
 - Auth walkthrough, mirrored for readers: [docs/auth.md](docs/auth.md)
 
 ## Licence
@@ -214,17 +252,22 @@ MoneyPeel 是一个远端 MCP 服务，收录 700+ 家小型软件产品的结�
 务仍然闭源，这里公开的恰好是客户端作者、目录审核方或另一个 agent 需要核对的东西。
 
 - 地址：`https://moneypeel.com/mcp`（Streamable HTTP）
-- 鉴权：OAuth 2.1 + PKCE，**没有 API 密钥**
+- 鉴权：OAuth 2.1 + PKCE，**没有 REST API 密钥**；只能发固定 header 的客户端可用连接页签发的连接凭据（只对 `/mcp` 生效，同身份/额度/吊销）
 - 服务卡：`https://moneypeel.com/.well-known/mcp/server-card.json`
 - 给 agent 的鉴权说明：`https://moneypeel.com/auth.md`
+- MCP Registry：`com.moneypeel/reports`（[官方 Registry 可查](https://registry.modelcontextprotocol.io/v0.1/servers?search=com.moneypeel%2Freports)）
 
-四个工具：`search_reports`、`list_reports`（免费、无需账户），`get_report`（读一份 = 1 次额度），`get_usage`（免费查额度）。免费账户每 UTC 月 2 次完整阅读。
+六个工具：`search_reports`、`list_reports`、`search_growth_signals`、`compare_companies`（四个都免费、无需账户），`get_report`（读一份 = 1 次额度），`get_usage`（免费查额度）。免费账户每 UTC 月 2 次完整阅读。
 
-两个提示词：`report_brief`（拆一篇）、`compare_products`（横向比）。
+`search_growth_signals` 按 7 天 / 30 天窗口排某个指标的变动，每行带基数、绝对增量、百分比与数据点数；`compare_companies` 比 2–5 家，逐格标 `comparable` / `partial` / `not_available` / `different_basis`，不同经济口径之间不排名。
+
+五个提示词：`report_brief`（拆一篇）、`compare_products`（横向比）、`find_ideas`、`find_growers`、`category_scan`。
 
 各客户端步骤见 [`clients/`](clients/)，链接与配置片段用
 `node scripts/install-links.mjs` 生成。
 
 **引用时的四条铁律**：数字必须带日期；收入不等于利润（看 `revenueBasis`）；`basisDetermination` 说这是人工读过还是按收费模式推断（推断不许说成已核实，置信度也不会是 `high`）；退款与税费每行都是 `unknown`——「未披露」不等于「未扣除」，不要把金额说成净额。`dataQuality` 是 `needs_review` 时先说明原因再引用。
+
+另外两条容易被忽略：指标级证据（`mrrEvidenceType` / `revenue30dEvidenceType`）只有 `provider_reported` 和 `unknown`，报告级 `source.reportEvidence` 描述的是报告正文的写作方式，**不会**把指标级证据升级；MRR 只引用 `displayMrr`，为 `null` 时说明该模式不适用，不要把原始 `mrr` 当 run-rate。
 
 数据仓（CC BY 4.0）：https://github.com/HZC20030712/moneypeel-rankings

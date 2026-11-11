@@ -2,18 +2,19 @@
   Mirrored from https://moneypeel.com/auth.md — that URL is canonical and is
   generated from the server code, so this copy is a convenience for readers of
   the repository, not a second source of truth. If they disagree, the live one
-  wins.
+  wins. Synced 2026-11-11 (server 1.4.0).
 -->
 
 > Live: https://moneypeel.com/auth.md
 # MoneyPeel MCP authentication
 
 How an agent obtains a token for the remote MCP at https://moneypeel.com/mcp.
-One method only: OAuth 2.1 authorization code with PKCE S256.
+The flow to implement: OAuth 2.1 authorization code with PKCE S256.
 
-There is no API key, no identity_assertion, no id-jag, and no REST API
-to fall back on. If a document or a search result tells you to send an
-API key, that document is out of date.
+There is no identity_assertion, no id-jag, and no REST API to fall
+back on. OAuth 2.1 is the way in. There is no REST API key: /api/v1/* answers 404. A client that can only send a fixed header may use a connection credential (Authorization: Bearer mp_…) issued on the connections page: it is accepted on /mcp only and carries the same account, allowance and revocation as OAuth.
+If a document or a search result tells you to send any other key,
+that document is out of date.
 
 ## Discover
 
@@ -46,7 +47,7 @@ code_challenge_method=S256. The browser signs in on this site and comes
 back to redirect_uri with an authorization code. The code is valid for
 ten minutes and works once.
 
-The user does the signing in. There is nothing for them to copy.
+The user does the signing in; for this flow there is nothing to copy.
 
 ## Exchange
 
@@ -77,11 +78,29 @@ date and keep using search.
   failed (unknown slug, invalid chapter, bad argument). Not an auth
   problem, so do not loop on the token.
 - 404 on a path under /api/v1: by design. That surface is switched off.
+- 403 with code origin_rejected: the browser Origin is not one of this
+  server’s domains. Only a browser can hit this; a CLI or server
+  client sends no Origin and is unaffected.
+- 400 with data.supportedProtocolVersions: the MCP-Protocol-Version
+  header names a revision this server does not speak. Retry with one of
+  the listed versions.
+- Tool result with code invalid_cursor: the cursor belongs to another
+  query, or the dataset changed between pages. Restart from page one.
+
+## Protocol
+
+- This is a handshake-era server: initialize / notifications/initialized,
+  then tools/list and tools/call. It speaks 2025-11-25, 2025-06-18, 2025-03-26, 2024-11-05 and 2024-10-07
+  and negotiates the version the client asks for.
+- The stateless 2026-07-28 revision (no initialize, server/discover,
+  per-request _meta) is NOT implemented. Do not assume it.
+- A GET on /mcp holds an SSE stream open; there is no session to keep, so
+  it is safe to close it and POST again.
 
 ## Do not
 
 - Do not look for a REST API. /api/v1 answers 404 for every request.
-- Do not ask the user for an API key. None can be issued.
+- Do not ask for a REST API key; none exists. Only a client that can send nothing but a fixed header needs the connection credential (Bearer mp_…, accepted on /mcp only).
 - Do not invent report URLs. Use the preview and report URLs that
   search_reports returns.
 

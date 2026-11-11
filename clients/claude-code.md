@@ -10,5 +10,5 @@ Then, in a session:
 2. pick `moneypeel`
 3. **Authenticate** — the browser opens, sign in, done.
 
-Verify: `/mcp` should list four tools. Try
+Verify: `/mcp` should list six tools (`search_reports`, `list_reports`, `search_growth_signals`, `compare_companies`, `get_report`, `get_usage`). Try
 `search_reports` with `{"query": "postiz", "limit": 2}`.

@@ -71,7 +71,7 @@ Prompts: `report_brief` (one product), `compare_products` (several),
   **deprecated aliases** of it; if a cached older response shows a different
   value, trust `reportContentAsOf`.
 - **Contract versions.** Every result's `source` carries `schemaVersion` (the
-  server contract version that produced it, e.g. `1.4.1`) and `dataPolicyVersion`
+  server contract version that produced it, e.g. `1.4.2`) and `dataPolicyVersion`
   (the economic-basis classification rule version, e.g. `2026-11-10.1`); a
   `get_report` result also carries both at its top level. Quote the pair when a
   rule or field matters to the answer.

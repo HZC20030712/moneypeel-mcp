@@ -57,6 +57,57 @@ claims and the server says so in its instructions.
 Prompts: `report_brief` (one product), `compare_products` (several),
 `find_ideas`, `find_growers`, `category_scan`. All are free.
 
+## Dates, clocks and snapshots
+
+- **Current revenue.** `revenueAsOf` is the date the figure describes; `mrrAsOf` /
+  `revenue30dAsOf` are the per-metric dates and `asOfBasis` says where they came
+  from. Dataset coverage is `dataThrough` + `dataFreshness`;
+  `lastSuccessfulSyncAt` is the pipeline's write time and
+  `sourceRevenueSyncedAt` the source's sync time — never quote either as the
+  date of a number.
+- **Report body date.** A `get_report` response has one authoritative value,
+  `reportContentAsOf` (at the top level and in `source`), and the Markdown header
+  uses the same date. `reportResearchAsOf` and `dataAsOf` remain only as
+  **deprecated aliases** of it; if a cached older response shows a different
+  value, trust `reportContentAsOf`.
+- **Contract versions.** Every result's `source` carries `schemaVersion` (the
+  server contract version that produced it, e.g. `1.4.1`) and `dataPolicyVersion`
+  (the economic-basis classification rule version, e.g. `2026-11-10.1`); a
+  `get_report` result also carries both at its top level. Quote the pair when a
+  rule or field matters to the answer.
+- **Chapter snapshots.** Each `chapters[]` entry carries `leadAsOf` (date of the
+  figures in its `lead`, or `null`), `snapshotType` (`current` or
+  `historical_research_snapshot`) and `figuresAsOf` (date the amounts or ratios
+  in the lead belong to, or `null`). A lead marked
+  `historical_research_snapshot` is a historical figure: quote it with its date
+  and never merge it with the current KPI.
+
+## What is actually read-only
+
+Five tools are read-only: `search_reports`, `list_reports`,
+`search_growth_signals`, `compare_companies`, `get_usage` (`readOnlyHint:
+true`, `idempotentHint: true`, `destructiveHint: false`). `get_report` is
+`readOnlyHint: false`, `idempotentHint: false`, `destructiveHint: false`: each
+successful read changes the account's remaining reads. Never describe the
+server as a whole as read-only.
+
+## Keeping this file honest
+
+Tool names, parameters, field names and annotations here are a snapshot of the
+production `tools/list`. When they disagree, production wins — fix this file,
+never the server description. Verify anonymously (spends no read):
+
+```bash
+curl -s https://moneypeel.com/mcp \
+  -H 'content-type: application/json' \
+  -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+Expect 6 tools. The app repository ships a hard check,
+`scripts/verify/mcp-contract.mjs --base=https://moneypeel.com`, which fails when
+the tool count, parameter sets or annotations drift from the server.
+
 ## Quoting rules
 
 - **Always carry the date.** Every row has `revenueAsOf` (the date the figure

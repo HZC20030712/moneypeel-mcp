@@ -17,6 +17,7 @@ reviewer or another agent needs to check.
 [![auth: OAuth 2.1](https://img.shields.io/badge/auth-OAuth_2.1-0e7490)](https://moneypeel.com/auth.md)
 [![REST API key: none](https://img.shields.io/badge/REST_API_key-none-15803d)](https://moneypeel.com/auth.md)
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-lightgrey)](LICENSE)
+[![contract: drift-tested](https://img.shields.io/badge/contract-drift--tested-0e7490)](contracts/)
 [![server: 1.4.4](https://img.shields.io/badge/server-1.4.4-1f2937)](https://moneypeel.com/.well-known/mcp/release.json)
 [![registry: published](https://img.shields.io/badge/registry-com.moneypeel%2Freports-0e7490)](https://registry.modelcontextprotocol.io/v0.1/servers?search=com.moneypeel%2Freports)
 [![basis rules: 2026-11-10.1](https://img.shields.io/badge/basis_rules-2026--11--10.1-6b7280)](https://moneypeel.com/method)
@@ -28,6 +29,16 @@ reviewer or another agent needs to check.
 > with it — the list of files and the check order lives in
 > `MCP 增长数据开源计划/07-开源同步清单.md` on the site repo. If the two badges above
 > are older than `release.json`, this kit is stale.
+
+## Five questions, answered up front
+
+| Question | Answer |
+|---|---|
+| **What is it?** | A remote MCP server for SaaS and AI revenue research: 700+ small software products with provider-reported revenue signals, MRR bands, growth, pricing and acquisition channels, plus a written teardown per product. |
+| **What data does it expose?** | Dated amounts and their economic basis, growth moves with their base, comparison cells with a status, and the report prose. Every figure carries the date it belongs to and whether a payment provider actually stamped it. |
+| **What does it not tell you?** | Profit, margin, cash flow, churn or retention, market size (TAM), or audited financial results. Revenue is not profit, and the sample is not the market. The full refusal list, question by question, is <https://moneypeel.com/use-cases>. |
+| **How do I connect?** | Streamable HTTP at `https://moneypeel.com/mcp`, OAuth 2.1 + PKCE discovered from a `401` challenge. Per-client commands under [Install](#install); there is no API key to paste. |
+| **Which tools cost a read?** | Only `get_report` — one read for a full report or a single chapter. `search_reports`, `list_reports`, `search_growth_signals`, `compare_companies` and `get_usage` are free. |
 
 ---
 
@@ -125,6 +136,18 @@ get_report { "slug": "postiz", "chapter": 2 }
 ```
 
 > how does it actually get customers? (costs 1 read)
+
+## When to use it, and when not to
+
+Use it when the question needs **dated evidence that money moved**, plus how the product
+prices and acquires customers: revenue validation ("does anyone actually pay for this?"),
+light competitor research, growth research, business-model comparison, and automated
+research driven by an agent.
+
+Do not use it for profit or margin, market size (TAM), churn or retention, audited accounts,
+or investment advice. Those need inputs this dataset does not have, and a revenue signal
+stretched to cover them is how a plausible answer becomes a wrong one. Both halves — with
+the surface that answers each question — are on <https://moneypeel.com/use-cases>.
 
 ## Quota
 
@@ -234,14 +257,20 @@ Yes: [moneypeel-rankings](https://github.com/HZC20030712/moneypeel-rankings) —
 
 ```
 clients/            one file per client, in install order
+contracts/          committed production tools/list snapshots, one per version
 docs/auth.md        the agent-facing auth walkthrough (mirror of /auth.md)
-scripts/            install-links.mjs — deeplinks and configs
+scripts/            install-links.mjs (deeplinks, configs)
+                    verify-production-contract.mjs (contract drift check)
+.github/workflows/  contract-drift.yml — runs the check on every change and daily
 SKILL.md            what an agent reads before calling
+CHANGELOG.md        contract-level changes, by server version
 ```
 
 ## Related
 
 - Site: https://moneypeel.com
+- When to use it / when not to: https://moneypeel.com/use-cases
+- Contract history: [CHANGELOG.md](CHANGELOG.md) and [contracts/](contracts/)
 - Open dataset (CC BY 4.0): https://github.com/HZC20030712/moneypeel-rankings
 - MCP Registry: `com.moneypeel/reports` — https://registry.modelcontextprotocol.io/v0.1/servers?search=com.moneypeel%2Freports
 - Auth walkthrough, mirrored for readers: [docs/auth.md](docs/auth.md)
@@ -285,5 +314,7 @@ MoneyPeel 是一个远端 MCP 服务，收录 700+ 家小型软件产品的结�
 **引用时的四条铁律**：数字必须带日期；收入不等于利润（看 `revenueBasis`）；`basisDetermination` 说这是人工读过还是按收费模式推断（推断不许说成已核实，置信度也不会是 `high`）；退款与税费每行都是 `unknown`——「未披露」不等于「未扣除」，不要把金额说成净额。`dataQuality` 是 `needs_review` 时先说明原因再引用。
 
 另外两条容易被忽略：指标级证据（`mrrEvidenceType` / `revenue30dEvidenceType`）只有 `provider_reported` 和 `unknown`，报告级 `source.reportEvidence` 描述的是报告正文的写作方式，**不会**把指标级证据升级；MRR 只引用 `displayMrr`，为 `null` 时说明该模式不适用，不要把原始 `mrr` 当 run-rate。
+
+什么时候该用、什么时候不该用：https://moneypeel.com/use-cases —— 付费验证、方向研究、竞品与增长研究适用；利润、TAM、留存、审计报表与投资建议不适用。契约变更看 [CHANGELOG.md](CHANGELOG.md) 与 [contracts/](contracts/)。
 
 数据仓（CC BY 4.0）：https://github.com/HZC20030712/moneypeel-rankings

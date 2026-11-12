@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Connection and auth walkthrough
+    url: https://moneypeel.com/auth.md
+    about: OAuth discovery, the 401 challenge, and the connection credential for header-only clients.
+  - name: Data questions, billing and privacy
+    url: https://moneypeel.com/privacy
+    about: What the server records, what it does not, and how to ask for deletion.

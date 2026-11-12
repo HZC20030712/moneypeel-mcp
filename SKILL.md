@@ -80,11 +80,13 @@ Prompts: `report_brief` (one product), `compare_products` (several),
   **deprecated aliases** of it; if a cached older response shows a different
   value, trust `reportContentAsOf`.
 - **Contract versions.** Every result's `source` carries `schemaVersion` (the
-  server contract version that produced it, e.g. `1.4.4`), `dataPolicyVersion`
-  (the economic-basis classification rule version, e.g. `2026-11-10.1`) and
-  `growthRuleVersion` (the rule set that judged a growth row, e.g.
-  `2026-11-11.2`); a `get_report` result also carries the first two at its top
-  level. Quote the pair when a rule or field matters to the answer.
+  server contract version that produced it), `dataPolicyVersion` (the
+  economic-basis classification rule version) and `growthRuleVersion` (the rule
+  set that judged a growth row); a `get_report` result also carries the first two
+  at its top level. Do not assume a fixed `schemaVersion`: it is whatever the
+  server currently runs, so read it back from the response and compare it with the
+  date of the data instead of hard-coding a release number. Quote the pair when a
+  rule or field matters to the answer.
 - **Chapter snapshots.** Each `chapters[]` entry carries `leadAsOf` (date of the
   figures in its `lead`, or `null`), `snapshotType` (`current` or
   `historical_research_snapshot`), `snapshotTypeDetail` (`current`, `historical`
@@ -115,9 +117,16 @@ curl -s https://moneypeel.com/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
-Expect 6 tools. The app repository ships a hard check,
-`scripts/verify/mcp-contract.mjs --base=https://moneypeel.com`, which fails when
-the tool count, parameter sets or annotations drift from the server.
+Expect 6 tools. This repository ships the check that keeps this file honest:
+
+```bash
+node scripts/verify-production-contract.mjs --base=https://moneypeel.com
+```
+
+It fails when the tool count, a declared `outputSchema` field, an annotation or a version
+stamp drifts from the server, and when the committed
+`contracts/tools-list-<version>.json` no longer matches production. CI runs it on every
+change and on a daily schedule.
 
 ## Quoting rules
 

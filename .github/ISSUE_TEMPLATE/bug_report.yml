@@ -1,0 +1,36 @@
+name: Client or kit bug
+description: A client will not connect, a tool call fails, or this kit says something the server does not.
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: run `@node scripts/verify-production-contract.mjs`@. It is anonymous,
+        spends no read, and tells you whether the server itself is serving the contract this
+        repository documents.
+  - type: input
+    id: client
+    attributes:
+      label: Client and version
+      description: For example "Claude Code 2.x", "Codex CLI 0.x", "Cursor 1.x on Windows".
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: The tool call (tool name + arguments), the response, and what you expected instead.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: schemaVersion from the response
+      description: Every result carries source.schemaVersion — it tells us which contract you hit.
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: Before posting
+      options:
+        - label: I removed account ids, tokens and connection credentials from the pasted output.
+          required: true

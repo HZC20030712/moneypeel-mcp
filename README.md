@@ -23,7 +23,7 @@ reviewer or another agent needs to check.
 
 **English** · [简体中文](#中文)
 
-> **Synced with server `1.4.2` / economic-basis rules `2026-11-10.1`** (2026-11-11).
+> **Synced with server `1.4.4` / economic-basis rules `2026-11-10.1`** (2026-11-11).
 > When the server's contract changes, this kit and the dataset READMEs have to change
 > with it — the list of files and the check order lives in
 > `MCP 增长数据开源计划/07-开源同步清单.md` on the site repo. If the two badges above

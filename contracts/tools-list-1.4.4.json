@@ -1,0 +1,4024 @@
+{
+  "$comment": "Generated from the production tools/list by scripts/verify-production-contract.mjs. Do not hand-edit: refresh with --write after a deploy.",
+  "schemaVersion": "1.4.4",
+  "capturedFrom": "https://moneypeel.com/mcp",
+  "protocolVersion": "2025-06-18",
+  "server": {
+    "name": "moneypeel-reports",
+    "version": "1.4.4"
+  },
+  "tools": [
+    {
+      "name": "search_reports",
+      "title": "Search reports",
+      "description": "Search public revenue reports by keyword and/or structured filters. No account needed, no reads spent. Pass \"query\" for text (name, domain, description) and/or filters such as minMrr or businessModel; at least one of the two is required — to browse the library instead, use list_reports. A filter on a missing value excludes the row (a null MRR is not $0). Each row carries mrr, revenue30d, business model, metric-level evidence type, a revenue snapshot date, revenue freshness, a dataQuality flag, a public preview link and the metered full-report link — often enough to answer without reading a report. When dataQuality.status is \"needs_review\", quote the caveat before the numbers. When revenueEligibleForRanking is false the amount is stale and must not be cited as current. Structured filters: businessModel, minMrr / maxMrr, minRevenue30d / maxRevenue30d, revenueFreshness, market, economicBasis, basisDetermination, dataQualityStatus, evidenceType, plus sortBy (revenue, mrr, name, growth) and growthWindow. `evidenceType` keeps a row only when every figure it reports (MRR and/or the 30-day amount) carries one of the requested metric-level types; a missing figure is skipped rather than counted as `unknown`. Only the parameters listed in this schema exist — do not invent others. Returns a `nextCursor` when more matches exist; a cursor is bound to the full request — query, filters, sort and `limit` — so keep all of them identical when you page, or it is rejected with invalid_cursor rather than silently reused.",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "query": {
+            "description": "Product name, domain, or keyword.",
+            "type": "string",
+            "minLength": 1
+          },
+          "businessModel": {
+            "description": "Business-model labels to include, e.g. [\"Subscription\",\"Marketplace Fee\"]. Exact match against the card label; unknown labels match nothing.",
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "minMrr": {
+            "description": "Only rows with mrr >= this (USD). Rows without an MRR are excluded, not treated as 0.",
+            "type": "number",
+            "minimum": 0
+          },
+          "maxMrr": {
+            "description": "Only rows with mrr <= this (USD).",
+            "type": "number",
+            "minimum": 0
+          },
+          "minRevenue30d": {
+            "description": "Only rows with revenue30d >= this (USD). Rows without a 30-day amount are excluded.",
+            "type": "number",
+            "minimum": 0
+          },
+          "maxRevenue30d": {
+            "description": "Only rows with revenue30d <= this (USD).",
+            "type": "number",
+            "minimum": 0
+          },
+          "revenueFreshness": {
+            "description": "current = the revenue may be quoted as a current figure; stale = the source flagged it. Omit for both.",
+            "type": "string",
+            "enum": [
+              "current",
+              "stale"
+            ]
+          },
+          "sortBy": {
+            "description": "Sort field; defaults to revenue (the 30-day amount). `growth` ranks by the move over `growthWindow`, using the same rows and order as https://moneypeel.com/revenue?by=growth&window=7d — rows with no daily series, or below the board gate, are not ranked. `economicBasis` orders by the economic-basis enum (subscription_charges first, unknown last), then by the 30-day amount; stale rows stay behind current ones in every order.",
+            "type": "string",
+            "enum": [
+              "revenue",
+              "mrr",
+              "name",
+              "growth",
+              "economicBasis"
+            ]
+          },
+          "growthWindow": {
+            "description": "Window for sortBy=growth; defaults to 7d (the board default). 30d compares the source-reported 30-day amount with its previous value.",
+            "type": "string",
+            "enum": [
+              "7d",
+              "30d"
+            ]
+          },
+          "market": {
+            "description": "Card market label(s) from the report card, matched case- and whitespace-insensitively: \"AI\", \"ai\" and \" AI \" are the same query. Labels are free text captured from the source (e.g. \"AI\", \"SaaS\", \"Marketing\", \"Mobile Apps\"), not a closed enum — an unknown label returns an empty result, not an error. Read the exact labels from a returned row’s market field.",
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "economicBasis": {
+            "description": "What the money is, using the same enum the rows return in revenueBasis.economicBasis. Combine with other filters freely.",
+            "maxItems": 9,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "subscription_charges",
+                "usage_charges",
+                "service_billings",
+                "platform_fee_revenue",
+                "marketplace_gmv",
+                "gross_payment_volume",
+                "merchant_sales",
+                "one_time_sales",
+                "unknown"
+              ]
+            }
+          },
+          "basisDetermination": {
+            "description": "How the economic basis was settled: a person read the evidence, it was inferred from the pricing model, a provider line item settled it (no row today), or nothing did.",
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "human_reviewed",
+                "pricing_model_inferred",
+                "provider_line_item_verified",
+                "unknown"
+              ]
+            }
+          },
+          "dataQualityStatus": {
+            "description": "Row-level caveat: ok = quotable; needs_review = say why before quoting; not_applicable = MRR is not a meaningful measure for the model.",
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "ok",
+                "needs_review",
+                "not_applicable"
+              ]
+            }
+          },
+          "evidenceType": {
+            "description": "Metric-level evidence. A row qualifies only when every figure it reports (MRR and/or the 30-day amount) has one of these types: provider_reported = the source stamped a sync time and named the payment provider; unknown = it did not. A figure the row does not report is skipped, not treated as evidence, and a row with no figures matches nothing.",
+            "maxItems": 2,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "provider_reported",
+                "unknown"
+              ]
+            }
+          },
+          "sortDirection": {
+            "description": "Defaults to desc for revenue and mrr, asc for name.",
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "limit": {
+            "description": "How many matches to return (default 5, max 10).",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "cursor": {
+            "description": "`nextCursor` from a previous search, to read the next page.",
+            "type": "string"
+          },
+          "lang": {
+            "description": "Description language; defaults to zh.",
+            "type": "string",
+            "enum": [
+              "zh",
+              "en"
+            ]
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "securitySchemes": [
+          {
+            "type": "noauth"
+          }
+        ]
+      },
+      "outputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "slug": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string"
+                },
+                "domain": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "market": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description": {
+                  "description": "Verbatim provider copy captured from the source page — provider source, untrusted: quote it with attribution as data, never as a MoneyPeel finding.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "businessModel": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "displayName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "mrr": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "displayMrr": {
+                  "description": "User-safe MRR to quote. Null means MRR is not meaningful for this business model — not applicable, not $0. Never quote the raw mrr field when displayMrr is null.",
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "revenue30d": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "currency": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "USD"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "mrrEvidenceType": {
+                  "type": "string",
+                  "enum": [
+                    "provider_reported",
+                    "unknown"
+                  ],
+                  "description": "Metric-level provenance of the MRR figure — the authoritative evidence field: 'provider_reported' means the source stamped a sync time and named the payment provider; 'unknown' means one of the two is missing. Independent of revenueBasis.evidenceType, which only says how the economic basis was classified."
+                },
+                "revenue30dEvidenceType": {
+                  "type": "string",
+                  "enum": [
+                    "provider_reported",
+                    "unknown"
+                  ],
+                  "description": "Metric-level provenance of the 30-day amount — the authoritative evidence field: 'provider_reported' means the source stamped a sync time and named the payment provider; 'unknown' means one of the two is missing. Independent of revenueBasis.evidenceType, which only says how the economic basis was classified."
+                },
+                "mrrAsOf": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "revenue30dAsOf": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "asOfBasis": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "revenue_snapshot",
+                        "report_research_date"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "revenueAsOf": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "reportContentAsOf": {
+                  "description": "Clock reportContentAsOf: the date the report prose was researched. The authoritative row date; reportResearchAsOf and dataAsOf are deprecated aliases of it.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "reportResearchAsOf": {
+                  "description": "DEPRECATED alias of reportContentAsOf; always the same value.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "sourceRevenueSyncedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "dataAsOf": {
+                  "description": "DEPRECATED alias of reportContentAsOf; always the same value.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "revenueEligibleForRanking": {
+                  "type": "boolean"
+                },
+                "revenueFreshness": {
+                  "type": "string",
+                  "enum": [
+                    "current",
+                    "stale",
+                    "unknown"
+                  ]
+                },
+                "staleReason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "dataQuality": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "needs_review",
+                        "not_applicable"
+                      ]
+                    },
+                    "reasons": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "mrr_revenue_ratio_over_10x",
+                          "zero_mrr_with_revenue",
+                          "non_recurring_model",
+                          "mrr_missing"
+                        ]
+                      }
+                    },
+                    "ratio": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "ratioStatus": {
+                      "type": "string",
+                      "enum": [
+                        "defined",
+                        "zero_denominator",
+                        "missing_value",
+                        "not_comparable"
+                      ]
+                    },
+                    "ratioNumerator": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "ratioDenominator": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "metricApplicability": {
+                      "type": "object",
+                      "properties": {
+                        "mrr": {
+                          "type": "string",
+                          "enum": [
+                            "applicable",
+                            "not_applicable",
+                            "unknown"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "mrr"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "reasons",
+                    "ratio",
+                    "ratioStatus",
+                    "ratioNumerator",
+                    "ratioDenominator",
+                    "metricApplicability"
+                  ],
+                  "additionalProperties": false
+                },
+                "revenueBasis": {
+                  "type": "object",
+                  "properties": {
+                    "metricName": {
+                      "type": "string",
+                      "const": "revenue_30d"
+                    },
+                    "metricType": {
+                      "type": "string",
+                      "const": "provider_reported_amount"
+                    },
+                    "economicBasis": {
+                      "type": "string",
+                      "enum": [
+                        "subscription_charges",
+                        "usage_charges",
+                        "service_billings",
+                        "platform_fee_revenue",
+                        "marketplace_gmv",
+                        "gross_payment_volume",
+                        "merchant_sales",
+                        "one_time_sales",
+                        "unknown"
+                      ]
+                    },
+                    "basisSource": {
+                      "type": "string",
+                      "enum": [
+                        "curated",
+                        "billing",
+                        "unclassified"
+                      ]
+                    },
+                    "basisDetermination": {
+                      "type": "string",
+                      "enum": [
+                        "human_reviewed",
+                        "pricing_model_inferred",
+                        "provider_line_item_verified",
+                        "unknown"
+                      ]
+                    },
+                    "basisConfidence": {
+                      "type": "string",
+                      "enum": [
+                        "high",
+                        "medium",
+                        "low"
+                      ]
+                    },
+                    "basisRuleVersion": {
+                      "type": "string"
+                    },
+                    "reviewedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "grossOrNetEvidence": {
+                      "type": "string",
+                      "enum": [
+                        "basis_definition",
+                        "provider_field",
+                        "unknown"
+                      ]
+                    },
+                    "sourceAdjustmentKnowledge": {
+                      "type": "string",
+                      "enum": [
+                        "provider_defined",
+                        "not_disclosed",
+                        "unknown"
+                      ]
+                    },
+                    "family": {
+                      "type": "string",
+                      "enum": [
+                        "recurring",
+                        "usage",
+                        "transactional",
+                        "service",
+                        "unclassified"
+                      ]
+                    },
+                    "grossOrNet": {
+                      "type": "string",
+                      "enum": [
+                        "gross",
+                        "net",
+                        "unknown"
+                      ]
+                    },
+                    "includesPassThrough": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "refundTreatment": {
+                      "type": "string",
+                      "const": "unknown"
+                    },
+                    "taxTreatment": {
+                      "type": "string",
+                      "const": "unknown"
+                    },
+                    "sourceMetricLabel": {
+                      "type": "string",
+                      "const": "revenue_last_30d"
+                    },
+                    "periodLabel": {
+                      "type": "string",
+                      "const": "trailing_30_days"
+                    },
+                    "periodEnd": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "currency": {
+                      "type": "string",
+                      "const": "USD"
+                    },
+                    "evidenceType": {
+                      "type": "string",
+                      "const": "unknown",
+                      "description": "Basis-classification evidence, not amount provenance: 'unknown' means the economic basis was not human-verified or settled. The amount's evidence is mrrEvidenceType / revenue30dEvidenceType; cite those as authoritative."
+                    },
+                    "basisLabel": {
+                      "type": "object",
+                      "properties": {
+                        "en": {
+                          "type": "string"
+                        },
+                        "zh": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "en",
+                        "zh"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "note": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "en": {
+                              "type": "string"
+                            },
+                            "zh": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "en",
+                            "zh"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "citation": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "en": {
+                              "type": "string"
+                            },
+                            "zh": {
+                              "type": "string"
+                            },
+                            "sourceUrl": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "capturedAt": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "untrustedSourceText": {
+                              "type": "boolean",
+                              "const": true
+                            }
+                          },
+                          "required": [
+                            "en",
+                            "zh",
+                            "sourceUrl",
+                            "capturedAt",
+                            "untrustedSourceText"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "passThroughStatus": {
+                      "type": "string",
+                      "enum": [
+                        "yes",
+                        "no",
+                        "unknown"
+                      ]
+                    },
+                    "classifiedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "billingKey": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "billingConfidence": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "metricName",
+                    "metricType",
+                    "economicBasis",
+                    "basisSource",
+                    "basisDetermination",
+                    "basisConfidence",
+                    "basisRuleVersion",
+                    "reviewedAt",
+                    "grossOrNetEvidence",
+                    "sourceAdjustmentKnowledge",
+                    "family",
+                    "grossOrNet",
+                    "includesPassThrough",
+                    "refundTreatment",
+                    "taxTreatment",
+                    "sourceMetricLabel",
+                    "periodLabel",
+                    "periodEnd",
+                    "currency",
+                    "evidenceType",
+                    "basisLabel",
+                    "note",
+                    "citation",
+                    "passThroughStatus",
+                    "classifiedAt",
+                    "billingKey",
+                    "billingConfidence"
+                  ],
+                  "additionalProperties": false
+                },
+                "reportAvailable": {
+                  "type": "boolean"
+                },
+                "previewUrl": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "fullReportUrl": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "growth": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "window": {
+                          "type": "string",
+                          "enum": [
+                            "7d",
+                            "30d"
+                          ]
+                        },
+                        "last": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "previous": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "pct": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "delta": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "days": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "sustained_growth",
+                            "spike_driven",
+                            "newly_observed",
+                            "period_over_period"
+                          ]
+                        },
+                        "eligible": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "window",
+                        "last",
+                        "previous",
+                        "pct",
+                        "kind",
+                        "eligible"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "slug",
+                "name",
+                "domain",
+                "market",
+                "description",
+                "businessModel",
+                "displayName",
+                "mrr",
+                "revenue30d",
+                "currency",
+                "mrrEvidenceType",
+                "revenue30dEvidenceType",
+                "mrrAsOf",
+                "revenue30dAsOf",
+                "asOfBasis",
+                "revenueAsOf",
+                "reportContentAsOf",
+                "reportResearchAsOf",
+                "sourceRevenueSyncedAt",
+                "dataAsOf",
+                "revenueEligibleForRanking",
+                "revenueFreshness",
+                "staleReason",
+                "dataQuality",
+                "revenueBasis",
+                "reportAvailable",
+                "previewUrl",
+                "fullReportUrl"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "offset": {
+            "type": "number"
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "methodologyUrl": {
+                "type": "string"
+              },
+              "dataThrough": {
+                "description": "Clock datasetThrough: the last day the whole dataset covers. A coverage date, not a sync timestamp.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dataFreshness": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "fresh",
+                      "delayed",
+                      "stale",
+                      "unknown"
+                    ]
+                  },
+                  "ageDays": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "label": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "ageDays",
+                  "label"
+                ],
+                "additionalProperties": false
+              },
+              "lastSuccessfulSyncAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "benchmarkAsOf": {
+                "type": "string",
+                "description": "Clock benchmarkAsOf: the snapshot date of the monthly benchmark aggregates; not a revenue snapshot date."
+              },
+              "schemaVersion": {
+                "type": "string",
+                "const": "1.4.4"
+              },
+              "dataPolicyVersion": {
+                "type": "string",
+                "const": "2026-11-10.1"
+              },
+              "growthRuleVersion": {
+                "type": "string",
+                "description": "NEW-MCP-110: the growth rule set behind any growth figure in this response, e.g. 2026-11-11.2. A change to a gate or kind threshold bumps this value; compare it to know whether two dates were judged by the same rules."
+              },
+              "disclaimer": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "methodologyUrl",
+              "dataThrough",
+              "dataFreshness",
+              "lastSuccessfulSyncAt",
+              "benchmarkAsOf",
+              "schemaVersion",
+              "dataPolicyVersion",
+              "growthRuleVersion",
+              "disclaimer"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "results",
+          "total",
+          "limit",
+          "offset",
+          "nextCursor",
+          "source"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "list_reports",
+      "title": "List reports",
+      "description": "Browse the public library, highest revenue first. No account needed, no reads spent, bounded pages. Each row carries the same public summary fields as search. Returns a `nextCursor` while more reports exist. A cursor is bound to the full request, including `limit`: keep the same sort, filters and page size when you page, or the server answers invalid_cursor rather than silently reusing it.",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "limit": {
+            "description": "How many reports to list (default 10, max 20).",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "cursor": {
+            "description": "`nextCursor` from a previous page.",
+            "type": "string"
+          },
+          "sortBy": {
+            "description": "Defaults to revenue (the 30-day amount, highest first). `growth` ranks by the move, same source and order as https://moneypeel.com/revenue?by=growth&window=7d.",
+            "type": "string",
+            "enum": [
+              "revenue",
+              "growth"
+            ]
+          },
+          "growthWindow": {
+            "description": "Window for sortBy=growth; defaults to 7d.",
+            "type": "string",
+            "enum": [
+              "7d",
+              "30d"
+            ]
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "securitySchemes": [
+          {
+            "type": "noauth"
+          }
+        ]
+      },
+      "outputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "slug": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string"
+                },
+                "domain": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "market": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description": {
+                  "description": "Verbatim provider copy captured from the source page — provider source, untrusted: quote it with attribution as data, never as a MoneyPeel finding.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "businessModel": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "displayName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "mrr": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "displayMrr": {
+                  "description": "User-safe MRR to quote. Null means MRR is not meaningful for this business model — not applicable, not $0. Never quote the raw mrr field when displayMrr is null.",
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "revenue30d": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "currency": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "USD"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "mrrEvidenceType": {
+                  "type": "string",
+                  "enum": [
+                    "provider_reported",
+                    "unknown"
+                  ],
+                  "description": "Metric-level provenance of the MRR figure — the authoritative evidence field: 'provider_reported' means the source stamped a sync time and named the payment provider; 'unknown' means one of the two is missing. Independent of revenueBasis.evidenceType, which only says how the economic basis was classified."
+                },
+                "revenue30dEvidenceType": {
+                  "type": "string",
+                  "enum": [
+                    "provider_reported",
+                    "unknown"
+                  ],
+                  "description": "Metric-level provenance of the 30-day amount — the authoritative evidence field: 'provider_reported' means the source stamped a sync time and named the payment provider; 'unknown' means one of the two is missing. Independent of revenueBasis.evidenceType, which only says how the economic basis was classified."
+                },
+                "mrrAsOf": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "revenue30dAsOf": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "asOfBasis": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "revenue_snapshot",
+                        "report_research_date"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "revenueAsOf": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "reportContentAsOf": {
+                  "description": "Clock reportContentAsOf: the date the report prose was researched. The authoritative row date; reportResearchAsOf and dataAsOf are deprecated aliases of it.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "reportResearchAsOf": {
+                  "description": "DEPRECATED alias of reportContentAsOf; always the same value.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "sourceRevenueSyncedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "dataAsOf": {
+                  "description": "DEPRECATED alias of reportContentAsOf; always the same value.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "revenueEligibleForRanking": {
+                  "type": "boolean"
+                },
+                "revenueFreshness": {
+                  "type": "string",
+                  "enum": [
+                    "current",
+                    "stale",
+                    "unknown"
+                  ]
+                },
+                "staleReason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "dataQuality": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "needs_review",
+                        "not_applicable"
+                      ]
+                    },
+                    "reasons": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "mrr_revenue_ratio_over_10x",
+                          "zero_mrr_with_revenue",
+                          "non_recurring_model",
+                          "mrr_missing"
+                        ]
+                      }
+                    },
+                    "ratio": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "ratioStatus": {
+                      "type": "string",
+                      "enum": [
+                        "defined",
+                        "zero_denominator",
+                        "missing_value",
+                        "not_comparable"
+                      ]
+                    },
+                    "ratioNumerator": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "ratioDenominator": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "metricApplicability": {
+                      "type": "object",
+                      "properties": {
+                        "mrr": {
+                          "type": "string",
+                          "enum": [
+                            "applicable",
+                            "not_applicable",
+                            "unknown"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "mrr"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "reasons",
+                    "ratio",
+                    "ratioStatus",
+                    "ratioNumerator",
+                    "ratioDenominator",
+                    "metricApplicability"
+                  ],
+                  "additionalProperties": false
+                },
+                "revenueBasis": {
+                  "type": "object",
+                  "properties": {
+                    "metricName": {
+                      "type": "string",
+                      "const": "revenue_30d"
+                    },
+                    "metricType": {
+                      "type": "string",
+                      "const": "provider_reported_amount"
+                    },
+                    "economicBasis": {
+                      "type": "string",
+                      "enum": [
+                        "subscription_charges",
+                        "usage_charges",
+                        "service_billings",
+                        "platform_fee_revenue",
+                        "marketplace_gmv",
+                        "gross_payment_volume",
+                        "merchant_sales",
+                        "one_time_sales",
+                        "unknown"
+                      ]
+                    },
+                    "basisSource": {
+                      "type": "string",
+                      "enum": [
+                        "curated",
+                        "billing",
+                        "unclassified"
+                      ]
+                    },
+                    "basisDetermination": {
+                      "type": "string",
+                      "enum": [
+                        "human_reviewed",
+                        "pricing_model_inferred",
+                        "provider_line_item_verified",
+                        "unknown"
+                      ]
+                    },
+                    "basisConfidence": {
+                      "type": "string",
+                      "enum": [
+                        "high",
+                        "medium",
+                        "low"
+                      ]
+                    },
+                    "basisRuleVersion": {
+                      "type": "string"
+                    },
+                    "reviewedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "grossOrNetEvidence": {
+                      "type": "string",
+                      "enum": [
+                        "basis_definition",
+                        "provider_field",
+                        "unknown"
+                      ]
+                    },
+                    "sourceAdjustmentKnowledge": {
+                      "type": "string",
+                      "enum": [
+                        "provider_defined",
+                        "not_disclosed",
+                        "unknown"
+                      ]
+                    },
+                    "family": {
+                      "type": "string",
+                      "enum": [
+                        "recurring",
+                        "usage",
+                        "transactional",
+                        "service",
+                        "unclassified"
+                      ]
+                    },
+                    "grossOrNet": {
+                      "type": "string",
+                      "enum": [
+                        "gross",
+                        "net",
+                        "unknown"
+                      ]
+                    },
+                    "includesPassThrough": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "refundTreatment": {
+                      "type": "string",
+                      "const": "unknown"
+                    },
+                    "taxTreatment": {
+                      "type": "string",
+                      "const": "unknown"
+                    },
+                    "sourceMetricLabel": {
+                      "type": "string",
+                      "const": "revenue_last_30d"
+                    },
+                    "periodLabel": {
+                      "type": "string",
+                      "const": "trailing_30_days"
+                    },
+                    "periodEnd": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "currency": {
+                      "type": "string",
+                      "const": "USD"
+                    },
+                    "evidenceType": {
+                      "type": "string",
+                      "const": "unknown",
+                      "description": "Basis-classification evidence, not amount provenance: 'unknown' means the economic basis was not human-verified or settled. The amount's evidence is mrrEvidenceType / revenue30dEvidenceType; cite those as authoritative."
+                    },
+                    "basisLabel": {
+                      "type": "object",
+                      "properties": {
+                        "en": {
+                          "type": "string"
+                        },
+                        "zh": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "en",
+                        "zh"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "note": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "en": {
+                              "type": "string"
+                            },
+                            "zh": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "en",
+                            "zh"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "citation": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "en": {
+                              "type": "string"
+                            },
+                            "zh": {
+                              "type": "string"
+                            },
+                            "sourceUrl": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "capturedAt": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "untrustedSourceText": {
+                              "type": "boolean",
+                              "const": true
+                            }
+                          },
+                          "required": [
+                            "en",
+                            "zh",
+                            "sourceUrl",
+                            "capturedAt",
+                            "untrustedSourceText"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "passThroughStatus": {
+                      "type": "string",
+                      "enum": [
+                        "yes",
+                        "no",
+                        "unknown"
+                      ]
+                    },
+                    "classifiedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "billingKey": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "billingConfidence": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "metricName",
+                    "metricType",
+                    "economicBasis",
+                    "basisSource",
+                    "basisDetermination",
+                    "basisConfidence",
+                    "basisRuleVersion",
+                    "reviewedAt",
+                    "grossOrNetEvidence",
+                    "sourceAdjustmentKnowledge",
+                    "family",
+                    "grossOrNet",
+                    "includesPassThrough",
+                    "refundTreatment",
+                    "taxTreatment",
+                    "sourceMetricLabel",
+                    "periodLabel",
+                    "periodEnd",
+                    "currency",
+                    "evidenceType",
+                    "basisLabel",
+                    "note",
+                    "citation",
+                    "passThroughStatus",
+                    "classifiedAt",
+                    "billingKey",
+                    "billingConfidence"
+                  ],
+                  "additionalProperties": false
+                },
+                "reportAvailable": {
+                  "type": "boolean"
+                },
+                "previewUrl": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "fullReportUrl": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "growth": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "window": {
+                          "type": "string",
+                          "enum": [
+                            "7d",
+                            "30d"
+                          ]
+                        },
+                        "last": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "previous": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "pct": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "delta": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "days": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "sustained_growth",
+                            "spike_driven",
+                            "newly_observed",
+                            "period_over_period"
+                          ]
+                        },
+                        "eligible": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "window",
+                        "last",
+                        "previous",
+                        "pct",
+                        "kind",
+                        "eligible"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "slug",
+                "name",
+                "domain",
+                "market",
+                "description",
+                "businessModel",
+                "displayName",
+                "mrr",
+                "revenue30d",
+                "currency",
+                "mrrEvidenceType",
+                "revenue30dEvidenceType",
+                "mrrAsOf",
+                "revenue30dAsOf",
+                "asOfBasis",
+                "revenueAsOf",
+                "reportContentAsOf",
+                "reportResearchAsOf",
+                "sourceRevenueSyncedAt",
+                "dataAsOf",
+                "revenueEligibleForRanking",
+                "revenueFreshness",
+                "staleReason",
+                "dataQuality",
+                "revenueBasis",
+                "reportAvailable",
+                "previewUrl",
+                "fullReportUrl"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "methodologyUrl": {
+                "type": "string"
+              },
+              "dataThrough": {
+                "description": "Clock datasetThrough: the last day the whole dataset covers. A coverage date, not a sync timestamp.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dataFreshness": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "fresh",
+                      "delayed",
+                      "stale",
+                      "unknown"
+                    ]
+                  },
+                  "ageDays": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "label": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "ageDays",
+                  "label"
+                ],
+                "additionalProperties": false
+              },
+              "lastSuccessfulSyncAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "benchmarkAsOf": {
+                "type": "string",
+                "description": "Clock benchmarkAsOf: the snapshot date of the monthly benchmark aggregates; not a revenue snapshot date."
+              },
+              "schemaVersion": {
+                "type": "string",
+                "const": "1.4.4"
+              },
+              "dataPolicyVersion": {
+                "type": "string",
+                "const": "2026-11-10.1"
+              },
+              "growthRuleVersion": {
+                "type": "string",
+                "description": "NEW-MCP-110: the growth rule set behind any growth figure in this response, e.g. 2026-11-11.2. A change to a gate or kind threshold bumps this value; compare it to know whether two dates were judged by the same rules."
+              },
+              "disclaimer": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "methodologyUrl",
+              "dataThrough",
+              "dataFreshness",
+              "lastSuccessfulSyncAt",
+              "benchmarkAsOf",
+              "schemaVersion",
+              "dataPolicyVersion",
+              "growthRuleVersion",
+              "disclaimer"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "results",
+          "total",
+          "nextCursor",
+          "source"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_report",
+      "title": "Read a report",
+      "description": "Read one published report as Markdown: positioning, marketing, growth plays, social, timeline and takeaways. Requires a connected MoneyPeel account. **This call is metered**: each successful read spends one read from the monthly allowance, a single chapter costs the same one read, and reading the same report again spends another. Free accounts get 2 reads per UTC month. Screen with search_reports / list_reports first — they cost nothing — and read only the reports the user actually needs; a failed lookup or a not_found never spends a read. The 'billing.readCharged' field in the result states whether this call spent one (0 means it was a retry inside the idempotency window). It has one authoritative report-content date: reportContentAsOf; reportResearchAsOf and dataAsOf are deprecated aliases carrying the same value, so never present two research dates. Every chapter carries leadAsOf, snapshotType and figuresAsOf: a lead that quotes money, percentages or subscription counts is a historical_research_snapshot, not current revenue. The source block also carries schemaVersion and dataPolicyVersion.",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Report slug, e.g. \"chatbase\"."
+          },
+          "chapter": {
+            "description": "Read just this chapter (1-6) instead of the whole report.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6
+          },
+          "lang": {
+            "description": "Report language; defaults to zh.",
+            "type": "string",
+            "enum": [
+              "zh",
+              "en"
+            ]
+          }
+        },
+        "required": [
+          "slug"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "domain": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "market": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mrr": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "displayMrr": {
+            "description": "User-safe MRR to quote. Null means MRR is not meaningful for this business model — not applicable, not $0. Never quote the raw mrr field when displayMrr is null.",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "revenue30d": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "reportContentAsOf": {
+            "description": "Clock reportContentAsOf: the date the report prose was researched. Authoritative; reportResearchAsOf and dataAsOf are deprecated aliases of it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reportResearchAsOf": {
+            "description": "DEPRECATED alias of reportContentAsOf; always the same value.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dataAsOf": {
+            "description": "DEPRECATED alias of reportContentAsOf; always the same value.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "revenueAsOf": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "schemaVersion": {
+            "type": "string",
+            "const": "1.4.4"
+          },
+          "dataPolicyVersion": {
+            "type": "string",
+            "const": "2026-11-10.1"
+          },
+          "dataQuality": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "needs_review",
+                  "not_applicable"
+                ]
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "mrr_revenue_ratio_over_10x",
+                    "zero_mrr_with_revenue",
+                    "non_recurring_model",
+                    "mrr_missing"
+                  ]
+                }
+              },
+              "ratio": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "ratioStatus": {
+                "type": "string",
+                "enum": [
+                  "defined",
+                  "zero_denominator",
+                  "missing_value",
+                  "not_comparable"
+                ]
+              },
+              "ratioNumerator": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "ratioDenominator": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "metricApplicability": {
+                "type": "object",
+                "properties": {
+                  "mrr": {
+                    "type": "string",
+                    "enum": [
+                      "applicable",
+                      "not_applicable",
+                      "unknown"
+                    ]
+                  }
+                },
+                "required": [
+                  "mrr"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "status",
+              "reasons",
+              "ratio",
+              "ratioStatus",
+              "ratioNumerator",
+              "ratioDenominator",
+              "metricApplicability"
+            ],
+            "additionalProperties": false
+          },
+          "revenueBasis": {
+            "type": "object",
+            "properties": {
+              "metricName": {
+                "type": "string",
+                "const": "revenue_30d"
+              },
+              "metricType": {
+                "type": "string",
+                "const": "provider_reported_amount"
+              },
+              "economicBasis": {
+                "type": "string",
+                "enum": [
+                  "subscription_charges",
+                  "usage_charges",
+                  "service_billings",
+                  "platform_fee_revenue",
+                  "marketplace_gmv",
+                  "gross_payment_volume",
+                  "merchant_sales",
+                  "one_time_sales",
+                  "unknown"
+                ]
+              },
+              "basisSource": {
+                "type": "string",
+                "enum": [
+                  "curated",
+                  "billing",
+                  "unclassified"
+                ]
+              },
+              "basisDetermination": {
+                "type": "string",
+                "enum": [
+                  "human_reviewed",
+                  "pricing_model_inferred",
+                  "provider_line_item_verified",
+                  "unknown"
+                ]
+              },
+              "basisConfidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ]
+              },
+              "basisRuleVersion": {
+                "type": "string"
+              },
+              "reviewedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "grossOrNetEvidence": {
+                "type": "string",
+                "enum": [
+                  "basis_definition",
+                  "provider_field",
+                  "unknown"
+                ]
+              },
+              "sourceAdjustmentKnowledge": {
+                "type": "string",
+                "enum": [
+                  "provider_defined",
+                  "not_disclosed",
+                  "unknown"
+                ]
+              },
+              "family": {
+                "type": "string",
+                "enum": [
+                  "recurring",
+                  "usage",
+                  "transactional",
+                  "service",
+                  "unclassified"
+                ]
+              },
+              "grossOrNet": {
+                "type": "string",
+                "enum": [
+                  "gross",
+                  "net",
+                  "unknown"
+                ]
+              },
+              "includesPassThrough": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "refundTreatment": {
+                "type": "string",
+                "const": "unknown"
+              },
+              "taxTreatment": {
+                "type": "string",
+                "const": "unknown"
+              },
+              "sourceMetricLabel": {
+                "type": "string",
+                "const": "revenue_last_30d"
+              },
+              "periodLabel": {
+                "type": "string",
+                "const": "trailing_30_days"
+              },
+              "periodEnd": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "currency": {
+                "type": "string",
+                "const": "USD"
+              },
+              "evidenceType": {
+                "type": "string",
+                "const": "unknown",
+                "description": "Basis-classification evidence, not amount provenance: 'unknown' means the economic basis was not human-verified or settled. The amount's evidence is mrrEvidenceType / revenue30dEvidenceType; cite those as authoritative."
+              },
+              "basisLabel": {
+                "type": "object",
+                "properties": {
+                  "en": {
+                    "type": "string"
+                  },
+                  "zh": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "en",
+                  "zh"
+                ],
+                "additionalProperties": false
+              },
+              "note": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "en": {
+                        "type": "string"
+                      },
+                      "zh": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "en",
+                      "zh"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "citation": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "en": {
+                        "type": "string"
+                      },
+                      "zh": {
+                        "type": "string"
+                      },
+                      "sourceUrl": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "capturedAt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "untrustedSourceText": {
+                        "type": "boolean",
+                        "const": true
+                      }
+                    },
+                    "required": [
+                      "en",
+                      "zh",
+                      "sourceUrl",
+                      "capturedAt",
+                      "untrustedSourceText"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "passThroughStatus": {
+                "type": "string",
+                "enum": [
+                  "yes",
+                  "no",
+                  "unknown"
+                ]
+              },
+              "classifiedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "billingKey": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "billingConfidence": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "metricName",
+              "metricType",
+              "economicBasis",
+              "basisSource",
+              "basisDetermination",
+              "basisConfidence",
+              "basisRuleVersion",
+              "reviewedAt",
+              "grossOrNetEvidence",
+              "sourceAdjustmentKnowledge",
+              "family",
+              "grossOrNet",
+              "includesPassThrough",
+              "refundTreatment",
+              "taxTreatment",
+              "sourceMetricLabel",
+              "periodLabel",
+              "periodEnd",
+              "currency",
+              "evidenceType",
+              "basisLabel",
+              "note",
+              "citation",
+              "passThroughStatus",
+              "classifiedAt",
+              "billingKey",
+              "billingConfidence"
+            ],
+            "additionalProperties": false
+          },
+          "revenueEligibleForRanking": {
+            "type": "boolean"
+          },
+          "revenueFreshness": {
+            "type": "string",
+            "enum": [
+              "current",
+              "stale",
+              "unknown"
+            ]
+          },
+          "staleReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "headline": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "headlineAsOf": {
+            "description": "NEW-MCP-106: the date the headline's figure belongs to — the report content date, because a headline is report prose. Null when the report has no headline or no date. Do not quote the headline as a current figure.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "headlineSnapshotType": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "historical_research_snapshot"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NEW-MCP-106: a headline quotes a historical research snapshot, never current revenue. Null when the report has no headline."
+          },
+          "leadAsOfBasis": {
+            "type": "object",
+            "properties": {
+              "basis": {
+                "type": "string",
+                "enum": [
+                  "report_body_generated_at",
+                  "report_content_date",
+                  "unattributed",
+                  "none"
+                ],
+                "description": "Where leadAsOf came from: the report body generated-at clock, the report content date, a value matching neither, or no clock at all."
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "chapter_summary_refreshed_after_prose",
+                  "same_clock",
+                  "chapter_clock_earlier_than_prose",
+                  "no_report_content_date",
+                  "no_lead_clock"
+                ],
+                "description": "How the two clocks relate. chapter_summary_refreshed_after_prose is the normal case: chapter figures are refreshed independently from the report prose."
+              },
+              "laterThanReportContent": {
+                "type": "boolean",
+                "description": "True when leadAsOf is strictly later than reportContentAsOf."
+              },
+              "daysAfterReportContent": {
+                "description": "leadAsOf minus reportContentAsOf in whole days; null when either clock is missing. Negative means the chapter clock is earlier.",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "basis",
+              "reason",
+              "laterThanReportContent",
+              "daysAfterReportContent"
+            ],
+            "additionalProperties": false,
+            "description": "NEW-MCP-103: leadAsOf may be later than reportContentAsOf because chapter summary figures can be refreshed independently from report prose."
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "zh",
+              "en"
+            ]
+          },
+          "chapters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "index": {
+                  "type": "number"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "lead": {
+                  "type": "string"
+                },
+                "leadAsOf": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "snapshotType": {
+                  "type": "string",
+                  "enum": [
+                    "current",
+                    "historical_research_snapshot"
+                  ],
+                  "description": "The released two-value chapter snapshot label. current means snapshotTypeDetail=current; historical_research_snapshot covers both historical and mixed details. Read snapshotTypeDetail for the precise reading."
+                },
+                "snapshotTypeDetail": {
+                  "type": "string",
+                  "enum": [
+                    "current",
+                    "historical",
+                    "mixed"
+                  ],
+                  "description": "The precise chapter snapshot. current = nothing dated is attached to the chapter; historical = a dated research observation, not current revenue; mixed = the chapter lead and its figures were captured on different days. snapshotType is its two-value compatibility view: historical and mixed map to historical_research_snapshot."
+                },
+                "figuresAsOf": {
+                  "description": "NEW-MCP-104: the date the lead figures belong to — the chapter summary capture date when the lead quotes a figure, null when it quotes none. Not the report content date.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "index",
+                "title",
+                "lead",
+                "leadAsOf",
+                "snapshotType",
+                "snapshotTypeDetail",
+                "figuresAsOf"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "claims": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "claimId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Stable location identity inside this report revision: chapter, play, section and line."
+                },
+                "claim": {
+                  "type": "string"
+                },
+                "claimType": {
+                  "type": "string",
+                  "enum": [
+                    "fact",
+                    "derived",
+                    "estimate",
+                    "interpretation"
+                  ]
+                },
+                "language": {
+                  "type": "string",
+                  "enum": [
+                    "en",
+                    "zh",
+                    "mixed"
+                  ],
+                  "description": "NEW-MCP-105: the language the claim text is actually written in (en, zh, or mixed when the sentence contains both Han characters and Latin letters). This describes the text, not the requested lang."
+                },
+                "fallback": {
+                  "type": "boolean",
+                  "description": "NEW-MCP-105: true when the claim is not in the requested lang (e.g. lang=en on a Chinese report body). When true, label the claim as a Chinese/mixed fallback before quoting it; when false the claim is in the requested language and may be quoted as-is."
+                },
+                "sourceUrl": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "sourceDate": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "confidence": {
+                  "type": "string",
+                  "enum": [
+                    "high",
+                    "medium",
+                    "low"
+                  ]
+                },
+                "notes": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "claimId",
+                "claim",
+                "claimType",
+                "language",
+                "fallback",
+                "sourceUrl",
+                "sourceDate",
+                "confidence",
+                "notes"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "markdown": {
+            "type": "string"
+          },
+          "billing": {
+            "type": "object",
+            "properties": {
+              "readCharged": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "const": 0
+                  },
+                  {
+                    "type": "number",
+                    "const": 1
+                  }
+                ]
+              },
+              "idempotentReplay": {
+                "type": "boolean"
+              },
+              "chapter": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "monthlyRemaining": {
+                "type": "number"
+              },
+              "monthlyLimit": {
+                "type": "number"
+              },
+              "resetAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "readCharged",
+              "idempotentReplay",
+              "chapter",
+              "monthlyRemaining",
+              "monthlyLimit",
+              "resetAt"
+            ],
+            "additionalProperties": false
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "sourceUrl": {
+                "type": "string"
+              },
+              "fullReportUrl": {
+                "type": "string"
+              },
+              "methodologyUrl": {
+                "type": "string"
+              },
+              "reportContentAsOf": {
+                "description": "Clock reportContentAsOf: the date the report prose was researched. The single authoritative report-content date in this response.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dataAsOf": {
+                "description": "DEPRECATED alias of reportContentAsOf; always the same value.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "evidenceType": {
+                "type": "string",
+                "enum": [
+                  "fact",
+                  "derived",
+                  "claimed",
+                  "estimate",
+                  "unknown"
+                ]
+              },
+              "reportEvidence": {
+                "type": "object",
+                "properties": {
+                  "evidenceType": {
+                    "type": "string",
+                    "enum": [
+                      "fact",
+                      "derived",
+                      "claimed",
+                      "estimate",
+                      "unknown"
+                    ]
+                  },
+                  "basis": {
+                    "type": "string",
+                    "enum": [
+                      "marked_claims",
+                      "no_marked_claims"
+                    ]
+                  },
+                  "dominantClaimType": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fact",
+                          "derived",
+                          "estimate",
+                          "interpretation"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "claimCount": {
+                    "type": "number"
+                  },
+                  "counts": {
+                    "type": "object",
+                    "properties": {
+                      "fact": {
+                        "type": "number"
+                      },
+                      "derived": {
+                        "type": "number"
+                      },
+                      "estimate": {
+                        "type": "number"
+                      },
+                      "interpretation": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "fact",
+                      "derived",
+                      "estimate",
+                      "interpretation"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "shares": {
+                    "type": "object",
+                    "properties": {
+                      "fact": {
+                        "type": "number"
+                      },
+                      "derived": {
+                        "type": "number"
+                      },
+                      "estimate": {
+                        "type": "number"
+                      },
+                      "interpretation": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "fact",
+                      "derived",
+                      "estimate",
+                      "interpretation"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "dominantShare": {
+                    "type": "number"
+                  },
+                  "mixed": {
+                    "type": "boolean"
+                  },
+                  "note": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "evidenceType",
+                  "basis",
+                  "dominantClaimType",
+                  "claimCount",
+                  "counts",
+                  "shares",
+                  "dominantShare",
+                  "mixed",
+                  "note"
+                ],
+                "additionalProperties": false
+              },
+              "revenueAsOf": {
+                "description": "Clock revenueSnapshotAsOf: the date the revenue figure describes. Never the report date and never the sync time.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dataThrough": {
+                "description": "Clock datasetThrough: the last day the whole revenue dataset covers. A coverage date, not a sync timestamp.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dataFreshness": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "fresh",
+                      "delayed",
+                      "stale",
+                      "unknown"
+                    ]
+                  },
+                  "ageDays": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "label": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "ageDays",
+                  "label"
+                ],
+                "additionalProperties": false
+              },
+              "lastSuccessfulSyncAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reportResearchAsOf": {
+                "description": "DEPRECATED alias of reportContentAsOf; always the same value.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "benchmarkAsOf": {
+                "type": "string",
+                "description": "Clock benchmarkAsOf: the snapshot date of the monthly benchmark aggregates; not a revenue snapshot date."
+              },
+              "schemaVersion": {
+                "type": "string",
+                "const": "1.4.4"
+              },
+              "dataPolicyVersion": {
+                "type": "string",
+                "const": "2026-11-10.1"
+              },
+              "disclaimer": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "sourceUrl",
+              "fullReportUrl",
+              "methodologyUrl",
+              "reportContentAsOf",
+              "dataAsOf",
+              "evidenceType",
+              "reportEvidence",
+              "revenueAsOf",
+              "dataThrough",
+              "dataFreshness",
+              "lastSuccessfulSyncAt",
+              "reportResearchAsOf",
+              "benchmarkAsOf",
+              "schemaVersion",
+              "dataPolicyVersion",
+              "disclaimer"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "domain",
+          "market",
+          "mrr",
+          "revenue30d",
+          "reportContentAsOf",
+          "reportResearchAsOf",
+          "dataAsOf",
+          "revenueAsOf",
+          "schemaVersion",
+          "dataPolicyVersion",
+          "dataQuality",
+          "revenueBasis",
+          "revenueEligibleForRanking",
+          "revenueFreshness",
+          "staleReason",
+          "headline",
+          "headlineAsOf",
+          "headlineSnapshotType",
+          "leadAsOfBasis",
+          "language",
+          "chapters",
+          "claims",
+          "markdown",
+          "billing",
+          "source"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_usage",
+      "title": "Check the read allowance",
+      "description": "Remaining reads for the connected account: plan, period, monthly and daily allowance, and the UTC reset time. Free — call it before reading a batch, but do not call it before every read.",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": [
+              "openid"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "plan": {
+            "type": "string"
+          },
+          "planName": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string"
+          },
+          "resetAt": {
+            "type": "string"
+          },
+          "monthly": {
+            "type": "object",
+            "properties": {
+              "used": {
+                "type": "number"
+              },
+              "limit": {
+                "type": "number"
+              },
+              "remaining": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "used",
+              "limit",
+              "remaining"
+            ],
+            "additionalProperties": false
+          },
+          "daily": {
+            "type": "object",
+            "properties": {
+              "used": {
+                "type": "number"
+              },
+              "limit": {
+                "type": "number"
+              },
+              "remaining": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "used",
+              "limit",
+              "remaining"
+            ],
+            "additionalProperties": false
+          },
+          "schemaVersion": {
+            "type": "string",
+            "const": "1.4.4"
+          },
+          "dataPolicyVersion": {
+            "type": "string",
+            "const": "2026-11-10.1"
+          }
+        },
+        "required": [
+          "plan",
+          "planName",
+          "period",
+          "resetAt",
+          "monthly",
+          "daily",
+          "schemaVersion",
+          "dataPolicyVersion"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "search_growth_signals",
+      "title": "Search growth signals",
+      "description": "Rank revenue or MRR moves over an explicit window. Free: no account needed and no reads spent. Ranking rule — 7-day board: baseline at least $500 over the previous 7 days, or at least $1,000 over the previous 30 days. 30-day board: baseline at least $1,000 over the previous 30 days. Either way the change must be at least 20%. By default only rows that clear that gate are ranked, and total counts them — the sample is the public growth board (https://moneypeel.com/revenue?by=growth), not the whole catalogue. The default order is percentage — the same order the public growth board prints; absolute (largest USD change) and consistency (steady growth above a one-day spike) are explicit alternatives. Every row carries baseline, start, end, absolute change, percentage, dataPoints, windowStart/windowEnd (null when the figure is source-reported rather than observed daily), growth kind, the economic basis and the metric-level evidence type. Percentages are never returned without their base; stale rows are marked and can be filtered out. MRR has no 7-day series: metric=mrr works with window=30d only. include_ineligible=true returns the wider signal pool instead: rows below the gate are appended after the ranked rows with rank=null, never take a rank, and total becomes the pool size, with counts {eligible, ineligible, pool}. The pool read is capped at 500 rows; truncated=true says the cap was hit.",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "metric": {
+            "description": "Which metric the move is measured on (default revenue_30d). MRR and the 30-day amount are never mixed in one ranking.",
+            "type": "string",
+            "enum": [
+              "mrr",
+              "revenue_30d"
+            ]
+          },
+          "window": {
+            "description": "Window the move is measured over (default 7d). 7d is rebuilt from the daily series; 30d moves are source-reported, so their window dates are null.",
+            "type": "string",
+            "enum": [
+              "7d",
+              "30d"
+            ]
+          },
+          "market": {
+            "description": "Card market label(s), matched case- and whitespace-insensitively on the same field search_reports filters on: \"AI\", \"ai\" and \" AI \" are one query. Free-text labels, not a closed enum; an unknown label returns an empty result.",
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "businessModel": {
+            "description": "Business-model labels to include, exact match.",
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "minBaseline": {
+            "description": "Only rows whose comparison base is at least this (USD).",
+            "type": "number",
+            "minimum": 0
+          },
+          "minAbsoluteIncrease": {
+            "description": "Only rows whose absolute change is at least this (USD; may be negative).",
+            "type": "number"
+          },
+          "minDataPoints": {
+            "description": "Only rows backed by at least this many observations (14 for a 7d daily series, 2 for a source-reported 30d figure).",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "freshness": {
+            "description": "current = the amount may be quoted as current; stale = the source flagged it. Omit for both.",
+            "type": "string",
+            "enum": [
+              "current",
+              "stale"
+            ]
+          },
+          "sort": {
+            "description": "Default percentage — the same order the public growth board prints (https://moneypeel.com/revenue?by=growth). absolute ranks by largest USD change first; consistency ranks steady growth above a one-day spike. Every comparator still returns the base amount.",
+            "type": "string",
+            "enum": [
+              "absolute",
+              "percentage",
+              "consistency"
+            ]
+          },
+          "limit": {
+            "description": "How many signals to return (default 5, max 10).",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "cursor": {
+            "description": "nextCursor from a previous growth search, to read the next page.",
+            "type": "string"
+          },
+          "include_ineligible": {
+            "description": "Default false: only rows that clear the board gate are ranked and total counts them. true: also return the wider signal pool — below-gate rows carry rank=null and never take a rank, total becomes the pool size, and counts says how the pool splits. The pool read is capped at 500 rows; truncated=true says the cap was hit.",
+            "type": "boolean"
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "securitySchemes": [
+          {
+            "type": "noauth"
+          }
+        ]
+      },
+      "outputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "slug": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "displayName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "market": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "businessModel": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "metricName": {
+                  "type": "string",
+                  "enum": [
+                    "mrr",
+                    "revenue_30d"
+                  ]
+                },
+                "metricType": {
+                  "type": "string",
+                  "const": "provider_reported_amount"
+                },
+                "window": {
+                  "type": "string",
+                  "enum": [
+                    "7d",
+                    "30d"
+                  ]
+                },
+                "windowStart": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "windowEnd": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "windowBasis": {
+                  "type": "string",
+                  "enum": [
+                    "daily_series",
+                    "source_reported"
+                  ]
+                },
+                "baseline": {
+                  "type": "number"
+                },
+                "start": {
+                  "type": "number"
+                },
+                "end": {
+                  "type": "number"
+                },
+                "absolute": {
+                  "type": "number"
+                },
+                "percentage": {
+                  "type": "number"
+                },
+                "dataPoints": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "kind": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "sustained_growth",
+                        "spike_driven",
+                        "newly_observed",
+                        "period_over_period"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "How the move was made. sustained_growth / spike_driven / newly_observed need a daily series with enough observations to judge; a source-reported two-point window can only be period_over_period (a period-over-period increase, nothing more), never sustained_growth or spike_driven. null when no kind is known."
+                },
+                "eligible": {
+                  "type": "boolean"
+                },
+                "eligibility": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "eligibilityDecision": {
+                  "description": "Complete typed form of eligibility. It is generated from the same decision as the legacy eligibility string.",
+                  "type": "object",
+                  "properties": {
+                    "eligible": {
+                      "type": "boolean"
+                    },
+                    "rule": {
+                      "type": "string",
+                      "enum": [
+                        "previous_7d_baseline",
+                        "previous_30d_baseline",
+                        "both",
+                        "previous_7d_baseline_and_previous_30d_baseline",
+                        "no_board_gate_mrr"
+                      ]
+                    },
+                    "thresholds": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "observed": {
+                      "type": "array",
+                      "items": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      }
+                    },
+                    "growthPct": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "growthThresholdPct": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "eligible",
+                    "rule",
+                    "thresholds",
+                    "observed",
+                    "growthPct",
+                    "growthThresholdPct"
+                  ],
+                  "additionalProperties": false
+                },
+                "eligibilityRule": {
+                  "description": "Which base gate the row used or was measured against: previous_7d_baseline, previous_30d_baseline, both, previous_7d_baseline_and_previous_30d_baseline (both bars missed), or no_board_gate_mrr. Mirrors rule= in the eligibility line.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "eligibilityThreshold": {
+                  "description": "USD bar of the primary gate (the first reported bar, 7-day before 30-day). null when no board gate applies (MRR). Read eligibilityThresholds for every reported bar.",
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "eligibilityBaseline": {
+                  "description": "The base observed against that bar; null when the source did not report it. This is the eligibility base, not the comparison base in baseline/start.",
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "eligibilityThresholds": {
+                  "description": "Every USD bar the eligibility line reports, in fixed 7-day-then-30-day order; empty when no board gate applies. eligibilityThreshold is its first entry.",
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "eligibilityBaselines": {
+                  "description": "Every observed base in the same order as eligibilityThresholds; a value the source did not report stays null rather than 0.",
+                  "type": "array",
+                  "items": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  }
+                },
+                "comparisonStart": {
+                  "description": "First day of the comparison period the percentage is measured from; null for a source-reported window, where no daily series was observed.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "comparisonEnd": {
+                  "description": "Last day of the comparison period; null for a source-reported window. Together with comparisonStart it is the base period, not the whole observation span.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "currentStart": {
+                  "description": "First day of the current period. For a 7-day daily series this is the day after comparisonEnd; null for source-reported two-point data.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "currentEnd": {
+                  "description": "Last day of the current period; null for source-reported two-point data.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "observationSpanDays": {
+                  "description": "Days of daily observation behind the move: 14 for a 7-day move (two 7-day periods), null when no daily series was observed. windowStart/windowEnd span these days, not the 7-day comparison window.",
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "rank": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "ineligibleReason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "economicBasis": {
+                  "type": "string",
+                  "enum": [
+                    "subscription_charges",
+                    "usage_charges",
+                    "service_billings",
+                    "platform_fee_revenue",
+                    "marketplace_gmv",
+                    "gross_payment_volume",
+                    "merchant_sales",
+                    "one_time_sales",
+                    "unknown"
+                  ]
+                },
+                "basisDetermination": {
+                  "type": "string",
+                  "enum": [
+                    "human_reviewed",
+                    "pricing_model_inferred",
+                    "provider_line_item_verified",
+                    "unknown"
+                  ]
+                },
+                "dataQuality": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "needs_review",
+                        "not_applicable"
+                      ]
+                    },
+                    "reasons": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "mrr_revenue_ratio_over_10x",
+                          "zero_mrr_with_revenue",
+                          "non_recurring_model",
+                          "mrr_missing"
+                        ]
+                      }
+                    },
+                    "ratio": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "ratioStatus": {
+                      "type": "string",
+                      "enum": [
+                        "defined",
+                        "zero_denominator",
+                        "missing_value",
+                        "not_comparable"
+                      ]
+                    },
+                    "ratioNumerator": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "ratioDenominator": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "metricApplicability": {
+                      "type": "object",
+                      "properties": {
+                        "mrr": {
+                          "type": "string",
+                          "enum": [
+                            "applicable",
+                            "not_applicable",
+                            "unknown"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "mrr"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "reasons",
+                    "ratio",
+                    "ratioStatus",
+                    "ratioNumerator",
+                    "ratioDenominator",
+                    "metricApplicability"
+                  ],
+                  "additionalProperties": false
+                },
+                "quoteCaveat": {
+                  "description": "Quote this warning before the numbers when dataQuality.status is needs_review. Independent of freshness and growth eligibility.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "evidenceType": {
+                  "type": "string",
+                  "enum": [
+                    "provider_reported",
+                    "unknown"
+                  ],
+                  "description": "Metric-level provenance of the row's revenue figure — the single authoritative evidence field for the amount. Never downgrade it because the row's economic basis is labelled unknown."
+                },
+                "freshness": {
+                  "type": "string",
+                  "enum": [
+                    "current",
+                    "stale"
+                  ]
+                },
+                "asOf": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "reportContentAsOf": {
+                  "description": "Clock reportContentAsOf: the date the report prose was researched; the same clock and value a search row carries. The board asOf is a different clock.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "reportResearchAsOf": {
+                  "description": "DEPRECATED alias of reportContentAsOf; always the same value.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "dataAsOf": {
+                  "description": "DEPRECATED alias of reportContentAsOf; always the same value.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "previewUrl": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "fullReportUrl": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "slug",
+                "displayName",
+                "market",
+                "businessModel",
+                "metricName",
+                "metricType",
+                "window",
+                "windowStart",
+                "windowEnd",
+                "windowBasis",
+                "baseline",
+                "start",
+                "end",
+                "absolute",
+                "percentage",
+                "dataPoints",
+                "kind",
+                "eligible",
+                "eligibility",
+                "economicBasis",
+                "basisDetermination",
+                "evidenceType",
+                "freshness",
+                "asOf",
+                "reportContentAsOf",
+                "reportResearchAsOf",
+                "dataAsOf",
+                "previewUrl",
+                "fullReportUrl"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "offset": {
+            "type": "number"
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "includeIneligible": {
+            "type": "boolean"
+          },
+          "counts": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "eligible": {
+                    "type": "number"
+                  },
+                  "ineligible": {
+                    "type": "number"
+                  },
+                  "pool": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "eligible",
+                  "ineligible",
+                  "pool"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "query": {
+            "type": "object",
+            "properties": {
+              "metric": {
+                "type": "string",
+                "enum": [
+                  "mrr",
+                  "revenue_30d"
+                ]
+              },
+              "window": {
+                "type": "string",
+                "enum": [
+                  "7d",
+                  "30d"
+                ]
+              },
+              "sort": {
+                "type": "string",
+                "enum": [
+                  "absolute",
+                  "percentage",
+                  "consistency"
+                ]
+              }
+            },
+            "required": [
+              "metric",
+              "window",
+              "sort"
+            ],
+            "additionalProperties": false
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "asOf": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "availableDays": {
+            "type": "number"
+          },
+          "methodologyUrl": {
+            "type": "string"
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "methodologyUrl": {
+                "type": "string"
+              },
+              "dataThrough": {
+                "description": "Clock datasetThrough: the last day the whole dataset covers. A coverage date, not a sync timestamp.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dataFreshness": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "fresh",
+                      "delayed",
+                      "stale",
+                      "unknown"
+                    ]
+                  },
+                  "ageDays": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "label": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "ageDays",
+                  "label"
+                ],
+                "additionalProperties": false
+              },
+              "lastSuccessfulSyncAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "benchmarkAsOf": {
+                "type": "string",
+                "description": "Clock benchmarkAsOf: the snapshot date of the monthly benchmark aggregates; not a revenue snapshot date."
+              },
+              "schemaVersion": {
+                "type": "string",
+                "const": "1.4.4"
+              },
+              "dataPolicyVersion": {
+                "type": "string",
+                "const": "2026-11-10.1"
+              },
+              "growthRuleVersion": {
+                "type": "string",
+                "description": "NEW-MCP-110: the growth rule set behind any growth figure in this response, e.g. 2026-11-11.2. A change to a gate or kind threshold bumps this value; compare it to know whether two dates were judged by the same rules."
+              },
+              "disclaimer": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "methodologyUrl",
+              "dataThrough",
+              "dataFreshness",
+              "lastSuccessfulSyncAt",
+              "benchmarkAsOf",
+              "schemaVersion",
+              "dataPolicyVersion",
+              "growthRuleVersion",
+              "disclaimer"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "results",
+          "total",
+          "limit",
+          "offset",
+          "nextCursor",
+          "query",
+          "notes",
+          "asOf",
+          "availableDays",
+          "methodologyUrl",
+          "source"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "compare_companies",
+      "title": "Compare companies",
+      "description": "Compare 2-5 companies side by side on MRR, the 30-day amount, business model, economic basis, pricing, acquisition channels, target customer and positioning. Free: no account needed and no reads spent. Every cell carries a status: comparable, partial (e.g. stale, or captured prose rather than a normalised field), not_available (missing stays empty, never 0) or different_basis (the set mixes economic bases, so the amounts must not be ranked against each other). No cell is inferred and no company is ranked.",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "slugs": {
+            "minItems": 2,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "2-5 report slugs, e.g. [\"postiz\", \"cometly\"]. Get them from search_reports or list_reports; a slug that is not a published report is reported as not found."
+          }
+        },
+        "required": [
+          "slugs"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "securitySchemes": [
+          {
+            "type": "noauth"
+          }
+        ]
+      },
+      "outputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "companies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "slug": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "displayName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "previewUrl": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "fullReportUrl": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "reportContentAsOf": {
+                  "description": "Clock reportContentAsOf: the date the report prose was researched, on the same clock search rows use. It is not the date of any individual cell — read each cell.source.asOf for that.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "reportResearchAsOf": {
+                  "description": "DEPRECATED alias of reportContentAsOf; always the same value. Not the date of the captured-prose cells — each cell carries its own source.asOf.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "dataAsOf": {
+                  "description": "DEPRECATED alias of reportContentAsOf; always the same value.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "slug",
+                "displayName",
+                "previewUrl",
+                "fullReportUrl",
+                "reportContentAsOf",
+                "reportResearchAsOf",
+                "dataAsOf"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "enum": [
+                    "mrr",
+                    "revenue_30d",
+                    "business_model",
+                    "economic_basis",
+                    "pricing",
+                    "channels",
+                    "customer",
+                    "positioning"
+                  ]
+                },
+                "label": {
+                  "type": "object",
+                  "properties": {
+                    "en": {
+                      "type": "string"
+                    },
+                    "zh": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "en",
+                    "zh"
+                  ],
+                  "additionalProperties": false
+                },
+                "cells": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "slug": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "value": {
+                        "anyOf": [
+                          {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "comparable",
+                          "partial",
+                          "not_available",
+                          "different_basis"
+                        ]
+                      },
+                      "note": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "source": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "search_row",
+                              "report_public_summary"
+                            ]
+                          },
+                          "url": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uri"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "asOf": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "url",
+                          "asOf"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "slug",
+                      "value",
+                      "status",
+                      "note",
+                      "source"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "comparable": {
+                  "type": "boolean"
+                },
+                "note": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "key",
+                "label",
+                "cells",
+                "comparable",
+                "note"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "methodologyUrl": {
+                "type": "string"
+              },
+              "dataThrough": {
+                "description": "Clock datasetThrough: the last day the whole dataset covers. A coverage date, not a sync timestamp.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dataFreshness": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "fresh",
+                      "delayed",
+                      "stale",
+                      "unknown"
+                    ]
+                  },
+                  "ageDays": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "label": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "ageDays",
+                  "label"
+                ],
+                "additionalProperties": false
+              },
+              "lastSuccessfulSyncAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "benchmarkAsOf": {
+                "type": "string",
+                "description": "Clock benchmarkAsOf: the snapshot date of the monthly benchmark aggregates; not a revenue snapshot date."
+              },
+              "schemaVersion": {
+                "type": "string",
+                "const": "1.4.4"
+              },
+              "dataPolicyVersion": {
+                "type": "string",
+                "const": "2026-11-10.1"
+              },
+              "growthRuleVersion": {
+                "type": "string",
+                "description": "NEW-MCP-110: the growth rule set behind any growth figure in this response, e.g. 2026-11-11.2. A change to a gate or kind threshold bumps this value; compare it to know whether two dates were judged by the same rules."
+              },
+              "disclaimer": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "methodologyUrl",
+              "dataThrough",
+              "dataFreshness",
+              "lastSuccessfulSyncAt",
+              "benchmarkAsOf",
+              "schemaVersion",
+              "dataPolicyVersion",
+              "growthRuleVersion",
+              "disclaimer"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "companies",
+          "fields",
+          "notes",
+          "source"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

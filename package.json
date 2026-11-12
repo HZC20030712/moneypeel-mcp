@@ -7,7 +7,9 @@
   "license": "MIT",
   "scripts": {
     "links": "node scripts/install-links.mjs",
-    "links:prod": "node scripts/install-links.mjs --base https://moneypeel.com"
+    "links:prod": "node scripts/install-links.mjs --base https://moneypeel.com",
+    "verify": "node scripts/verify-production-contract.mjs",
+    "snapshot": "node scripts/verify-production-contract.mjs --write"
   },
   "keywords": ["mcp", "model-context-protocol", "oauth", "saas", "revenue", "market-research", "mcp-registry", "revenue-signals", "growth", "compare"],
   "repository": { "type": "git", "url": "https://github.com/HZC20030712/moneypeel-mcp" },

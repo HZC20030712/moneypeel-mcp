@@ -1,0 +1,29 @@
+name: contract drift
+
+# 2026-11-12 audit RELEASE-05: a release is not done when the server is deployed, it is
+# done when source -> declared contract -> production -> package all agree. This job is the
+# part of that chain that can run without any credentials, so it runs on every change and
+# on a daily schedule (a server deploy can happen without a commit in this repository).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Verify the live contract against the committed snapshot
+        run: node scripts/verify-production-contract.mjs --base=https://moneypeel.com

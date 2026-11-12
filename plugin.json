@@ -1,0 +1,15 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "moneypeel",
+  "version": "1.4.4",
+  "description": "Revenue and growth research for SaaS and AI products over the MoneyPeel MCP server.",
+  "author": {
+    "name": "MoneyPeel",
+    "email": "support@moneypeel.com",
+    "url": "https://moneypeel.com"
+  },
+  "homepage": "https://moneypeel.com/mcp-quickstart",
+  "repository": "https://github.com/HZC20030712/moneypeel-mcp",
+  "license": "MIT",
+  "keywords": ["revenue", "mrr", "growth", "saas", "market-research", "mcp"]
+}

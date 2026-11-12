@@ -17,13 +17,13 @@ reviewer or another agent needs to check.
 [![auth: OAuth 2.1](https://img.shields.io/badge/auth-OAuth_2.1-0e7490)](https://moneypeel.com/auth.md)
 [![REST API key: none](https://img.shields.io/badge/REST_API_key-none-15803d)](https://moneypeel.com/auth.md)
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-lightgrey)](LICENSE)
-[![server: 1.4.0](https://img.shields.io/badge/server-1.4.0-1f2937)](https://moneypeel.com/.well-known/mcp/release.json)
+[![server: 1.4.4](https://img.shields.io/badge/server-1.4.4-1f2937)](https://moneypeel.com/.well-known/mcp/release.json)
 [![registry: published](https://img.shields.io/badge/registry-com.moneypeel%2Freports-0e7490)](https://registry.modelcontextprotocol.io/v0.1/servers?search=com.moneypeel%2Freports)
 [![basis rules: 2026-11-10.1](https://img.shields.io/badge/basis_rules-2026--11--10.1-6b7280)](https://moneypeel.com/method)
 
 **English** · [简体中文](#中文)
 
-> **Synced with server `1.4.0` / economic-basis rules `2026-11-10.1`** (2026-11-11).
+> **Synced with server `1.4.4` / economic-basis rules `2026-11-10.1`** (2026-11-11).
 > When the server's contract changes, this kit and the dataset READMEs have to change
 > with it — the list of files and the check order lives in
 > `MCP 增长数据开源计划/07-开源同步清单.md` on the site repo. If the two badges above
@@ -149,8 +149,20 @@ not retry.
   total. `revenueBasis` says what it measures (subscription charges, usage
   charges, service billings, platform fee, GMV, gross payment volume, merchant
   sales, one-time sales, unknown).
-- **`dataQuality` is per row.** When it is `needs_review`, the 30-day amount and
-  the MRR disagree by an order of magnitude — say so before quoting.
+- **`dataQuality` is per row, and growth rows carry it too.** When it is
+  `needs_review`, the 30-day amount and the MRR disagree by an order of magnitude —
+  say so before quoting. A growth signal row adds a ready-made `quoteCaveat` for
+  exactly that case, and it is printed before the numbers: `provider_reported`
+  evidence and a `current` freshness do not clear a quality warning.
+- **A 30-day growth move is `period_over_period`.** The source reports two
+  amounts, so `windowBasis` is `source_reported` and `dataPoints` is 2; the
+  window dates are `null` rather than invented. Only a 7-day daily series can be
+  `sustained_growth` or `spike_driven`. Each result names the rule set in
+  `source.growthRuleVersion`.
+- **Every marked claim is addressable.** `get_report` returns `claims[]` with a
+  stable `claimId`, its `claimType`, the `language` the line is actually in and a
+  `fallback` flag. A `fact` line that asserts causation, profit or cash flow is
+  downgraded to `interpretation` at read time — keep the label you were given.
 - **`basisDetermination` says how we know it.** `human_reviewed` = a person read the
   captured monetisation description; `pricing_model_inferred` = derived from the
   public pricing model, never to be described as verified; `provider_line_item_verified`
@@ -260,6 +272,10 @@ MoneyPeel 是一个远端 MCP 服务，收录 700+ 家小型软件产品的结�
 六个工具：`search_reports`、`list_reports`、`search_growth_signals`、`compare_companies`（四个都免费、无需账户），`get_report`（读一份 = 1 次额度），`get_usage`（免费查额度）。免费账户每 UTC 月 2 次完整阅读。
 
 `search_growth_signals` 按 7 天 / 30 天窗口排某个指标的变动，每行带基数、绝对增量、百分比与数据点数；`compare_companies` 比 2–5 家，逐格标 `comparable` / `partial` / `not_available` / `different_basis`，不同经济口径之间不排名。
+
+增长行自带 `dataQuality`；`needs_review` 的行还会带 `quoteCaveat`，**引用时先把这句警告放在数字前面**——`provider_reported` 和 `current` 都不能抵消质量警告。30 天变化来自源报告的两期金额（`windowBasis=source_reported`、`dataPoints=2`、窗口日期为 `null`），因此只能是 `period_over_period`；只有 7 天逐日序列才可能被判成 `sustained_growth` 或 `spike_driven`。规则集版本在 `source.growthRuleVersion`。
+
+`get_report` 返回的 `claims[]` 每条都有稳定的 `claimId`、`claimType`、该行实际语言的 `language` 与 `fallback` 标记；标成「事实」但属于因果/利润/现金流断言的句子，读取时已降级为 `interpretation`，不要自行升格。
 
 五个提示词：`report_brief`（拆一篇）、`compare_products`（横向比）、`find_ideas`、`find_growers`、`category_scan`。
 

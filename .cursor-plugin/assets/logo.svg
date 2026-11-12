@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="MoneyPeel">
+  <title>MoneyPeel</title>
+  <rect width="512" height="512" rx="120" fill="#111111"/>
+  <rect x="120" y="104" width="272" height="304" rx="36" fill="#F6F6F3"/>
+  <rect x="144" y="280" width="48" height="64" rx="14" fill="#111111"/>
+  <rect x="208" y="240" width="48" height="104" rx="14" fill="#111111"/>
+  <rect x="272" y="200" width="48" height="144" rx="14" fill="#111111"/>
+  <path d="M392 288 L392 408 L272 408 Z" fill="#7EE8B5"/>
+</svg>

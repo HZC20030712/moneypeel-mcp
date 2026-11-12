@@ -45,7 +45,16 @@ claims and the server says so in its instructions.
 2. `list_reports` — browse when the user has no name in mind.
 3. `search_growth_signals` — free. Ranks 7d / 30d moves on one metric (`mrr` or
    `revenue_30d`) and returns the base amount with every percentage, so a growth
-   number can never travel alone.
+   number can never travel alone. Each move's `kind` is one of
+   `sustained_growth`, `spike_driven`, `newly_observed` or
+   `period_over_period`; add the kind when it changes the reading. A
+   source-reported 30-day move has two data points, so it is only
+   `period_over_period` — never call it sustained growth or a spike. Each row
+   also carries the row's own `dataQuality`; when the status is `needs_review`
+   the response includes a `quoteCaveat`, and that warning is printed **before**
+   the numbers. `provider_reported` evidence and a `current` freshness do not
+   clear it: say which figure you are quoting and that the two do not
+   reconcile.
 4. `compare_companies` — free. 2–5 slugs, cell by cell, each marked
    `comparable` / `partial` / `not_available` / `different_basis`. Amounts from
    mixed economic bases are never ranked.
@@ -71,14 +80,16 @@ Prompts: `report_brief` (one product), `compare_products` (several),
   **deprecated aliases** of it; if a cached older response shows a different
   value, trust `reportContentAsOf`.
 - **Contract versions.** Every result's `source` carries `schemaVersion` (the
-  server contract version that produced it, e.g. `1.4.2`) and `dataPolicyVersion`
-  (the economic-basis classification rule version, e.g. `2026-11-10.1`); a
-  `get_report` result also carries both at its top level. Quote the pair when a
-  rule or field matters to the answer.
+  server contract version that produced it, e.g. `1.4.4`), `dataPolicyVersion`
+  (the economic-basis classification rule version, e.g. `2026-11-10.1`) and
+  `growthRuleVersion` (the rule set that judged a growth row, e.g.
+  `2026-11-11.2`); a `get_report` result also carries the first two at its top
+  level. Quote the pair when a rule or field matters to the answer.
 - **Chapter snapshots.** Each `chapters[]` entry carries `leadAsOf` (date of the
   figures in its `lead`, or `null`), `snapshotType` (`current` or
-  `historical_research_snapshot`) and `figuresAsOf` (date the amounts or ratios
-  in the lead belong to, or `null`). A lead marked
+  `historical_research_snapshot`), `snapshotTypeDetail` (`current`, `historical`
+  or `mixed`) and `figuresAsOf` (date the amounts or ratios in the lead belong
+  to, or `null`). A lead marked
   `historical_research_snapshot` is a historical figure: quote it with its date
   and never merge it with the current KPI.
 
@@ -134,6 +145,12 @@ the tool count, parameter sets or annotations drift from the server.
   still have them. Do not re-derive a basis from `businessModel`.
 - **Check `dataQuality`.** When `status` is `needs_review`, say why before
   quoting: the 30-day amount and the MRR disagree by an order of magnitude.
+- **Every marked claim is addressable.** `get_report` returns `claims[]`, and
+  each item carries a stable `claimId` (chapter, play, section and line), its
+  `claimType` (`fact` / `derived` / `estimate` / `interpretation`), the
+  `language` the line is actually in and a `fallback` flag. A `fact` line that
+  asserts causation, profit or cash flow is downgraded to `interpretation` at
+  read time — keep the label you were given instead of re-upgrading the sentence.
 - **Metric evidence and report evidence are different axes.**
   `mrrEvidenceType` / `revenue30dEvidenceType` are `provider_reported` only
   when the source stamped a sync time and named the payment provider; anything

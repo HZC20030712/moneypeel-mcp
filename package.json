@@ -1,6 +1,6 @@
 {
   "name": "@moneypeel/mcp",
-  "version": "1.0.0",
+  "version": "1.4.4",
   "private": false,
   "description": "Open integration kit for the MoneyPeel MCP server: OAuth 2.1, no REST API key, a connection credential for header-only clients, six research tools and the official MCP Registry listing.",
   "type": "module",

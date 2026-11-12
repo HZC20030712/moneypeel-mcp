@@ -61,6 +61,10 @@ Five prompts ship with the server: `report_brief` (one product, one teardown),
 `compare_products` (two or more, side by side), `find_ideas`, `find_growers`
 and `category_scan`. All are free.
 
+**Topics:** SaaS revenue intelligence · AI product revenue · MRR research · startup growth
+signals · business intelligence over MCP · competitor research · growth teardowns ·
+economic basis.
+
 ## Endpoint
 
 | | |

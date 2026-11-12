@@ -3094,13 +3094,15 @@
                   "type": "boolean"
                 },
                 "eligibility": {
+                  "description": "DEPRECATED — use eligibilityDecision. String form of the same decision (\"rule=…; threshold=…\"), kept for clients written against 1.4.2 and earlier. Never the only place the decision is stated.",
+                  "deprecated": true,
                   "type": [
                     "string",
                     "null"
                   ]
                 },
                 "eligibilityDecision": {
-                  "description": "Complete typed form of eligibility. It is generated from the same decision as the legacy eligibility string.",
+                  "description": "Authoritative eligibility decision. Complete typed form generated from the same decision object as the deprecated eligibility string; a client should read this and not parse that string.",
                   "type": "object",
                   "properties": {
                     "eligible": {
@@ -3155,35 +3157,40 @@
                   "additionalProperties": false
                 },
                 "eligibilityRule": {
-                  "description": "Which base gate the row used or was measured against: previous_7d_baseline, previous_30d_baseline, both, previous_7d_baseline_and_previous_30d_baseline (both bars missed), or no_board_gate_mrr. Mirrors rule= in the eligibility line.",
+                  "description": "DEPRECATED — use eligibilityDecision.rule. Which base gate the row used or was measured against: previous_7d_baseline, previous_30d_baseline, both, previous_7d_baseline_and_previous_30d_baseline (both bars missed), or no_board_gate_mrr. Mirrors rule= in the eligibility line.",
+                  "deprecated": true,
                   "type": [
                     "string",
                     "null"
                   ]
                 },
                 "eligibilityThreshold": {
-                  "description": "USD bar of the primary gate (the first reported bar, 7-day before 30-day). null when no board gate applies (MRR). Read eligibilityThresholds for every reported bar.",
+                  "description": "DEPRECATED — use eligibilityDecision.thresholds. USD bar of the primary gate (the first reported bar, 7-day before 30-day). null when no board gate applies (MRR).",
+                  "deprecated": true,
                   "type": [
                     "number",
                     "null"
                   ]
                 },
                 "eligibilityBaseline": {
-                  "description": "The base observed against that bar; null when the source did not report it. This is the eligibility base, not the comparison base in baseline/start.",
+                  "description": "DEPRECATED — use eligibilityDecision.observed. The base observed against that bar; null when the source did not report it. This is the eligibility base, not the comparison base in baseline/start.",
+                  "deprecated": true,
                   "type": [
                     "number",
                     "null"
                   ]
                 },
                 "eligibilityThresholds": {
-                  "description": "Every USD bar the eligibility line reports, in fixed 7-day-then-30-day order; empty when no board gate applies. eligibilityThreshold is its first entry.",
+                  "description": "DEPRECATED — use eligibilityDecision.thresholds. Every USD bar the eligibility line reports, in fixed 7-day-then-30-day order; empty when no board gate applies.",
+                  "deprecated": true,
                   "type": "array",
                   "items": {
                     "type": "number"
                   }
                 },
                 "eligibilityBaselines": {
-                  "description": "Every observed base in the same order as eligibilityThresholds; a value the source did not report stays null rather than 0.",
+                  "description": "DEPRECATED — use eligibilityDecision.observed. Every observed base in the same order as eligibilityThresholds; a value the source did not report stays null rather than 0.",
+                  "deprecated": true,
                   "type": "array",
                   "items": {
                     "type": [

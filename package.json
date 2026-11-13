@@ -9,6 +9,7 @@
     "links": "node scripts/install-links.mjs",
     "links:prod": "node scripts/install-links.mjs --base https://moneypeel.com",
     "verify": "node scripts/verify-production-contract.mjs",
+    "verify:mcp": "node scripts/verify-production-contract.mjs",
     "snapshot": "node scripts/verify-production-contract.mjs --write"
   },
   "keywords": ["mcp", "model-context-protocol", "oauth", "saas", "revenue", "market-research", "mcp-registry", "revenue-signals", "growth", "compare"],

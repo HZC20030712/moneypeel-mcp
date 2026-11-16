@@ -254,7 +254,7 @@ No — the data is the product. The integration kit here is MIT; the server and 
 dataset are not.
 
 **Is there an open dataset?**
-Yes: [moneypeel-rankings](https://github.com/HZC20030712/moneypeel-rankings) —
+Yes: [how-small-software-businesses-make-money](https://github.com/HZC20030712/how-small-software-businesses-make-money) —
 738 products by revenue band, trend, pricing and category, CC BY 4.0, weekly.
 
 ## Repository layout
@@ -275,7 +275,7 @@ CHANGELOG.md        contract-level changes, by server version
 - Site: https://moneypeel.com
 - When to use it / when not to: https://moneypeel.com/use-cases
 - Contract history: [CHANGELOG.md](CHANGELOG.md) and [contracts/](contracts/)
-- Open dataset (CC BY 4.0): https://github.com/HZC20030712/moneypeel-rankings
+- Open dataset (CC BY 4.0): https://github.com/HZC20030712/how-small-software-businesses-make-money
 - MCP Registry: `com.moneypeel/reports` — https://registry.modelcontextprotocol.io/v0.1/servers?search=com.moneypeel%2Freports
 - Auth walkthrough, mirrored for readers: [docs/auth.md](docs/auth.md)
 
@@ -321,4 +321,4 @@ MoneyPeel 是一个远端 MCP 服务，收录 700+ 家小型软件产品的结�
 
 什么时候该用、什么时候不该用：https://moneypeel.com/use-cases —— 付费验证、方向研究、竞品与增长研究适用；利润、TAM、留存、审计报表与投资建议不适用。契约变更看 [CHANGELOG.md](CHANGELOG.md) 与 [contracts/](contracts/)。
 
-数据仓（CC BY 4.0）：https://github.com/HZC20030712/moneypeel-rankings
+数据仓（CC BY 4.0）：https://github.com/HZC20030712/how-small-software-businesses-make-money

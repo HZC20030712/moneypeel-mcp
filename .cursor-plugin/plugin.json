@@ -9,6 +9,13 @@
   "homepage": "https://moneypeel.com/mcp-quickstart",
   "repository": "https://github.com/HZC20030712/moneypeel-mcp",
   "license": "MIT",
-  "keywords": ["revenue", "mrr", "growth", "saas", "market-research", "mcp"],
-  "logo": "assets/logo.svg"
+  "keywords": [
+    "revenue",
+    "mrr",
+    "growth",
+    "saas",
+    "market-research",
+    "mcp"
+  ],
+  "logo": "assets/logo.png"
 }

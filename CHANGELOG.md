@@ -12,6 +12,9 @@ if the kit and the server disagree, the kit is wrong (run
 
 Public-discovery and citation-integrity release.
 
+- `.cursor-plugin/plugin.json` declares `assets/logo.png`, and that file now exists: the
+  Cursor listing had a relative logo path that returned 404 (2026-11-20 Grok audit, F3).
+
 - Official Registry `com.moneypeel/reports@1.4.5` points at the canonical public
   integration kit, `HZC20030712/moneypeel-mcp`, rather than the application source.
 - `auth.md` names all four anonymous research tools and limits Bearer requirements to

@@ -3388,6 +3388,20 @@
                     "null"
                   ]
                 },
+                "amountAsOf": {
+                  "description": "Date the amount belongs to — not the dataset asOf and not today. Null when the source row carries no amount date.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "providerSyncAt": {
+                  "description": "Source sync time for this row (a write time, not the date the amount is about).",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "reportContentAsOf": {
                   "description": "Clock reportContentAsOf: the date the report prose was researched; the same clock and value a search row carries. The board asOf is a different clock.",
                   "type": [
@@ -3670,7 +3684,7 @@
     {
       "name": "compare_companies",
       "title": "Compare companies",
-      "description": "Compare 2-5 companies side by side on MRR, the 30-day amount, business model, economic basis, pricing, acquisition channels, target customer and positioning. Free: no account needed and no reads spent. Every cell carries a status: comparable, partial (e.g. stale, or captured prose rather than a normalised field), not_available (missing stays empty, never 0) or different_basis (the set mixes economic bases, so the amounts must not be ranked against each other). No cell is inferred and no company is ranked.",
+      "description": "Compare 2-5 companies side by side on MRR, the 30-day amount, business model, economic basis, pricing, acquisition channels, target customer and positioning. Free: no account needed and no reads spent. Every cell carries a status: comparable, partial (e.g. stale, or captured prose rather than a normalised field), not_available (missing stays empty, never 0) or different_basis (the set mixes economic bases, so the amounts must not be ranked against each other). Each company also carries its row-level dataQuality, revenueFreshness, staleReason and metric evidence; when a row is flagged needs_review the caveat is repeated on its amount cells, so a compare-only client still sees the warning. No cell is inferred and no company is ranked.",
       "inputSchema": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
@@ -3764,6 +3778,165 @@
                   "type": [
                     "string",
                     "null"
+                  ]
+                },
+                "dataQuality": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "needs_review",
+                        "not_applicable"
+                      ]
+                    },
+                    "reasons": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "mrr_revenue_ratio_over_10x",
+                          "zero_mrr_with_revenue",
+                          "non_recurring_model",
+                          "mrr_missing"
+                        ]
+                      }
+                    },
+                    "ratio": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "ratioStatus": {
+                      "type": "string",
+                      "enum": [
+                        "defined",
+                        "zero_denominator",
+                        "missing_value",
+                        "not_comparable"
+                      ]
+                    },
+                    "ratioNumerator": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "ratioDenominator": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "metricApplicability": {
+                      "type": "object",
+                      "properties": {
+                        "mrr": {
+                          "type": "string",
+                          "enum": [
+                            "applicable",
+                            "not_applicable",
+                            "unknown"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "mrr"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "reasons",
+                    "ratio",
+                    "ratioStatus",
+                    "ratioNumerator",
+                    "ratioDenominator",
+                    "metricApplicability"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Row-level quality exactly as the search surface reports it. A needs_review row keeps its reason here and on its amount cells."
+                },
+                "revenueFreshness": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "current",
+                        "stale",
+                        "unknown"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "staleReason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "metricEvidence": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "mrr": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "revenue30d": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "mrr",
+                        "revenue30d"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "metricEvidenceAsOf": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "mrr": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "revenue30d": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "mrr",
+                        "revenue30d"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
                   ]
                 }
               },
@@ -3882,6 +4055,18 @@
                             ]
                           },
                           "asOf": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "capturedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "dateNote": {
                             "type": [
                               "string",
                               "null"

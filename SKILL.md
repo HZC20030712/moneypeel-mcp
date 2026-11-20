@@ -57,7 +57,11 @@ claims and the server says so in its instructions.
    and never turn a short-lived spike into a sustained-growth claim.
 4. `compare_companies` — free. 2–5 slugs, cell by cell, each marked
    `comparable` / `partial` / `not_available` / `different_basis`. Amounts from
-   mixed economic bases are never ranked.
+   mixed economic bases are never ranked. Each company also carries the row's
+   `dataQuality`, `revenueFreshness`, `staleReason` and metric evidence; when
+   the row is `needs_review` its amount cells are `partial` and repeat the
+   reason, and the text form prints a "Read first" line before the numbers. A
+   `comparable` cell never means "safe to quote without the caveat".
 5. `get_report` — only when the user wants the teardown, or the summary is not
    enough to answer. **It costs one read** (a single chapter costs the same), and
    free accounts have 2 per UTC month. Do not read a report you will not use.
@@ -154,6 +158,14 @@ change and on a daily schedule.
   still have them. Do not re-derive a basis from `businessModel`.
 - **Check `dataQuality`.** When `status` is `needs_review`, say why before
   quoting: the 30-day amount and the MRR disagree by an order of magnitude.
+  This applies to `compare_companies` too — the same reason arrives on that
+  company's amount cells, not only on the search row.
+- **Quote the amount date, not the dataset date.** A growth row carries
+  `amountAsOf` (the date its amount describes) and `providerSyncAt` (when the
+  source wrote it) beside `asOf` (the last day the dataset covers). A captured
+  prose cell carries `source.capturedAt` and a `source.dateNote` when the text
+  itself claims a later date: quote the date the text states, not the capture
+  date.
 - **Every marked claim is addressable.** `get_report` returns `claims[]`, and
   each item carries a stable `claimId` (chapter, play, section and line), its
   `claimType` (`fact` / `derived` / `estimate` / `interpretation`), the

@@ -23,6 +23,8 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import Ajv from 'ajv';
+import addFormats from 'ajv-formats';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -37,6 +39,8 @@ const arg = (name, fallback) => {
 };
 const BASE = String(arg('base', 'https://moneypeel.com')).replace(/\/$/, '');
 const WRITE = Boolean(arg('write', false));
+const SPEND = Boolean(arg('spend', false));
+const TOKEN = process.env.MONEYPEEL_MCP_BEARER_TOKEN ?? null;
 const PROTOCOL_VERSION = '2025-06-18';
 const EXPECTED_TOOLS = [
   'search_reports',
@@ -46,6 +50,14 @@ const EXPECTED_TOOLS = [
   'search_growth_signals',
   'compare_companies',
 ];
+const PUBLIC_TOOLS = new Set([
+  'search_reports',
+  'list_reports',
+  'search_growth_signals',
+  'compare_companies',
+]);
+const ajv = new Ajv({ allErrors: true, strict: false });
+addFormats(ajv);
 
 const results = [];
 function record(id, ok, detail) {
@@ -71,12 +83,13 @@ function parseBody(text) {
   return last;
 }
 
-async function rpc(method, params, sessionId) {
+async function rpc(method, params, sessionId, token = null) {
   const headers = {
     'content-type': 'application/json',
     accept: 'application/json, text/event-stream',
   };
   if (sessionId) headers['mcp-session-id'] = sessionId;
+  if (token) headers.authorization = `Bearer ${token}`;
   const res = await fetch(`${BASE}/mcp`, {
     method: 'POST',
     headers,
@@ -87,6 +100,35 @@ async function rpc(method, params, sessionId) {
   }
   const body = parseBody(await res.text());
   return { body, sessionId: res.headers.get('mcp-session-id') ?? sessionId };
+}
+
+function schemaErrors(validate) {
+  return (validate.errors ?? [])
+    .slice(0, 4)
+    .map((entry) => `${entry.instancePath || '/'} ${entry.message}`)
+    .join('; ');
+}
+
+async function callAndValidate(tool, args, sessionId, token = null) {
+  const response = await rpc(
+    'tools/call',
+    { name: tool.name, arguments: args },
+    sessionId,
+    token
+  );
+  const result = response.body?.result;
+  if (!result || result.isError === true) {
+    return { ok: false, detail: result?.content?.[0]?.text ?? 'missing result' };
+  }
+  const validate = ajv.compile(tool.outputSchema);
+  const ok = validate(result.structuredContent);
+  return {
+    ok,
+    detail: ok
+      ? `real tools/call structuredContent matches ${tool.name}.outputSchema`
+      : schemaErrors(validate),
+    structuredContent: result.structuredContent,
+  };
 }
 
 async function readJson(relPath) {
@@ -150,11 +192,11 @@ async function main() {
     );
   }
 
-  // R06: annotations are explicit on every tool (a directory reviewer reads them).
+  // R06: annotations and auth are explicit on every tool (a directory reviewer reads them).
   const missingHints = tools
     .filter((tool) => {
       const meta = tool.annotations ?? {};
-      return ['readOnlyHint', 'destructiveHint', 'idempotentHint'].some(
+      return ['readOnlyHint', 'destructiveHint', 'idempotentHint', 'openWorldHint'].some(
         (key) => typeof meta[key] !== 'boolean'
       );
     })
@@ -162,7 +204,19 @@ async function main() {
   record(
     'R06 annotation hints',
     missingHints.length === 0,
-    missingHints.length ? `missing hints: ${missingHints.join(', ')}` : 'all six tools state the boolean hints'
+    missingHints.length ? `missing hints: ${missingHints.join(', ')}` : 'all six tools state all four boolean hints'
+  );
+  const securityGaps = tools.flatMap((tool) => {
+    const schemes = tool._meta?.securitySchemes ?? [];
+    const expected = PUBLIC_TOOLS.has(tool.name) ? 'noauth' : 'oauth2';
+    return schemes.length === 1 && schemes[0]?.type === expected
+      ? []
+      : [`${tool.name}=${JSON.stringify(schemes)} expected ${expected}`];
+  });
+  record(
+    'R06b security schemes',
+    securityGaps.length === 0,
+    securityGaps.length ? securityGaps.join('; ') : 'four noauth tools and two oauth2 tools'
   );
 
   // R07: the release manifest must describe the same deployment.
@@ -172,9 +226,17 @@ async function main() {
   } catch {
     release = null;
   }
+  const releaseTools = release?.tools ?? [];
+  const releaseNames = releaseTools.map((tool) => tool.name);
+  const releaseExact =
+    release?.server?.version === liveVersion &&
+    releaseNames.length === EXPECTED_TOOLS.length &&
+    EXPECTED_TOOLS.every((name) => releaseNames.includes(name)) &&
+    releaseTools.filter((tool) => tool.metered).map((tool) => tool.name).join(',') === 'get_report' &&
+    releaseTools.every((tool) => tool.annotations?.openWorldHint === false);
   record(
     'R07 release manifest',
-    Boolean(release) && release?.server?.version === liveVersion,
+    Boolean(release) && releaseExact,
     release
       ? `release.json server.version ${release.server.version}, ${release.tools?.length ?? 0} tools, metered ${(release.tools ?? []).filter((t) => t.metered).map((t) => t.name).join(',') || 'none'}`
       : 'release.json did not answer'
@@ -227,6 +289,7 @@ async function main() {
   const docs = {
     'README.md': await readFile(path.join(ROOT, 'README.md'), 'utf8'),
     'SKILL.md': await readFile(path.join(ROOT, 'SKILL.md'), 'utf8'),
+    'docs/auth.md': await readFile(path.join(ROOT, 'docs/auth.md'), 'utf8'),
   };
   const docGaps = [];
   for (const [file, text] of Object.entries(docs)) {
@@ -237,10 +300,103 @@ async function main() {
       docGaps.push(`${file} still says "four tools"`);
     }
   }
+  const auth = docs['docs/auth.md'];
+  for (const name of PUBLIC_TOOLS) {
+    if (!auth.includes(name)) docGaps.push(`docs/auth.md never names anonymous ${name}`);
+  }
+  if (auth.includes('tools/call without a valid token stays 401')) {
+    docGaps.push('docs/auth.md still says every tools/call needs auth');
+  }
   record(
     'R09 docs parity',
     docGaps.length === 0,
-    docGaps.length ? docGaps.join('; ') : 'README and SKILL name all six tools and claim no other count'
+    docGaps.length ? docGaps.join('; ') : 'README, SKILL and auth mirror agree on all six tools and the auth boundary'
+  );
+
+  // R10: schemas are executable contracts, not decorations. Exercise every
+  // anonymous tool with real production output and validate structuredContent.
+  const byName = new Map(tools.map((tool) => [tool.name, tool]));
+  const calls = {};
+  calls.search_reports = await callAndValidate(
+    byName.get('search_reports'),
+    { query: 'ai', limit: 2 },
+    list.sessionId
+  );
+  calls.list_reports = await callAndValidate(
+    byName.get('list_reports'),
+    { limit: 2 },
+    list.sessionId
+  );
+  calls.search_growth_signals = await callAndValidate(
+    byName.get('search_growth_signals'),
+    { metric: 'mrr', window: '7d', limit: 1 },
+    list.sessionId
+  );
+  const slugs = (calls.list_reports.structuredContent?.results ?? [])
+    .map((row) => row.slug)
+    .filter(Boolean)
+    .slice(0, 2);
+  calls.compare_companies = slugs.length === 2
+    ? await callAndValidate(
+        byName.get('compare_companies'),
+        { slugs },
+        list.sessionId
+      )
+    : { ok: false, detail: 'list_reports did not return two slugs for compare fixture' };
+  for (const name of PUBLIC_TOOLS) {
+    record(`R10 ${name} real output`, calls[name].ok, calls[name].detail);
+  }
+
+  // Authenticated validation is opt-in. CI must never spend a report read.
+  if (TOKEN) {
+    const usage = await callAndValidate(byName.get('get_usage'), {}, list.sessionId, TOKEN);
+    record('R10 get_usage real output', usage.ok, usage.detail);
+    if (SPEND) {
+      const slug = process.env.MONEYPEEL_REPORT_SLUG;
+      if (!slug) {
+        record('R10 get_report real output', false, '--spend requires MONEYPEEL_REPORT_SLUG');
+      } else {
+        const report = await callAndValidate(
+          byName.get('get_report'),
+          { slug },
+          list.sessionId,
+          TOKEN
+        );
+        record('R10 get_report real output', report.ok, report.detail);
+      }
+    } else {
+      console.log('SKIP R10 get_report real output  pass --spend and a slug to authorize one metered read');
+    }
+  } else {
+    console.log('SKIP R10 authenticated outputs  set MONEYPEEL_MCP_BEARER_TOKEN (and --spend for get_report)');
+  }
+
+  // R11: discovery must lead a client to this public integration kit, not the
+  // private application source repository that older Registry releases named.
+  let registry = null;
+  try {
+    registry = await (
+      await fetch(
+        'https://registry.modelcontextprotocol.io/v0.1/servers?search=' +
+          encodeURIComponent('com.moneypeel/reports')
+      )
+    ).json();
+  } catch {
+    registry = null;
+  }
+  const latest = (registry?.servers ?? []).find(
+    (entry) =>
+      entry?.server?.name === 'com.moneypeel/reports' &&
+      entry?._meta?.['io.modelcontextprotocol.registry/official']?.isLatest === true
+  );
+  record(
+    'R11 official Registry discovery',
+    latest?.server?.version === liveVersion &&
+      latest?.server?.repository?.url ===
+        'https://github.com/HZC20030712/moneypeel-mcp',
+    latest
+      ? `${latest.server.name}@${latest.server.version} -> ${latest.server.repository?.url}`
+      : 'no latest official Registry record found'
   );
 
   const failed = results.filter((entry) => !entry.ok);

@@ -6,7 +6,7 @@ description: Look up provider-reported revenue signals, MRR, growth and acquisit
 # MoneyPeel revenue research
 
 A remote MCP server with structured business intelligence on small software
-companies: provider-verified revenue signals, MRR, 30-day amounts, pricing
+companies: provider-reported revenue signals, MRR, 30-day amounts, pricing
 models, acquisition channels, and a written teardown for each one.
 
 ## When to use it
@@ -51,10 +51,10 @@ claims and the server says so in its instructions.
    source-reported 30-day move has two data points, so it is only
    `period_over_period` — never call it sustained growth or a spike. Each row
    also carries the row's own `dataQuality`; when the status is `needs_review`
-   the response includes a `quoteCaveat`, and that warning is printed **before**
-   the numbers. `provider_reported` evidence and a `current` freshness do not
-   clear it: say which figure you are quoting and that the two do not
-   reconcile.
+   or the kind is `spike_driven`, the response includes a `quoteCaveat`, and
+   that warning is printed **before** the numbers. `provider_reported` evidence
+   and a `current` freshness do not clear it: say which figure you are quoting
+   and never turn a short-lived spike into a sustained-growth claim.
 4. `compare_companies` — free. 2–5 slugs, cell by cell, each marked
    `comparable` / `partial` / `not_available` / `different_basis`. Amounts from
    mixed economic bases are never ranked.

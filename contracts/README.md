@@ -3,6 +3,8 @@
 One file per released server version: `@tools-list-<version>.json`@, captured from the live
 `@tools/list`@. Generated, never hand-written.
 
+Current: `tools-list-1.4.5.json` (2026-11-20). Historical snapshots stay immutable.
+
 ## Why
 
 The 2026-11-12 release-chain audit found the same failure mode that produced this
@@ -37,10 +39,12 @@ when:
 - the tool set is not the six documented tools;
 - any tool's declared `outputSchema` is missing, or its `schemaVersion` const does not
   equal the version the server reports;
-- the annotation booleans are not stated on every tool;
+- the four annotation booleans or per-tool security schemes are not stated correctly;
 - `@.well-known/mcp/release.json`@ describes a different version or tool count;
 - the committed snapshot differs from production (contract drift);
-- `README.md`@ or `SKILL.md`@ stop naming all six tools.
+- `README.md`@, `SKILL.md`@ or `docs/auth.md`@ stop agreeing on tools and auth;
+- real anonymous `tools/call` output fails its declared JSON Schema;
+- the official Registry latest record points at another version or repository.
 
 ## Notes
 

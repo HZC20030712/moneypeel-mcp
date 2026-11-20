@@ -2,7 +2,7 @@
   Mirrored from https://moneypeel.com/auth.md — that URL is canonical and is
   generated from the server code, so this copy is a convenience for readers of
   the repository, not a second source of truth. If they disagree, the live one
-  wins. Synced 2026-11-11 (server 1.4.0).
+  wins. Synced 2026-11-20 (server 1.4.5).
 -->
 
 > Live: https://moneypeel.com/auth.md
@@ -21,7 +21,8 @@ that document is out of date.
 1. POST JSON-RPC to https://moneypeel.com/mcp.
 2. Methods that need an account and arrive without a Bearer token get
    HTTP 401. Those methods are get_report and get_usage. Everything else
-   — initialize, tools/list, prompts/list, search_reports, list_reports —
+   — initialize, tools/list, prompts/list, search_reports, list_reports,
+   search_growth_signals and compare_companies —
    works anonymously.
 3. Read the WWW-Authenticate header. It is a Bearer challenge carrying
    resource_metadata:
@@ -58,8 +59,9 @@ refresh_token (7 days). Refresh with grant_type=refresh_token.
 
 ## Use
 
-Send Authorization: Bearer <access_token> on every POST to https://moneypeel.com/mcp
-except initialize and ping. tools/call without a valid token stays 401.
+Send Authorization: Bearer <access_token> when calling get_report or get_usage at
+https://moneypeel.com/mcp. The four public research tools work without it.
+Only protected tools/call requests without a valid token answer 401.
 
 ## Quota
 

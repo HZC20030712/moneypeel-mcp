@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "moneypeel",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "description": "Revenue and growth research for SaaS and AI products over the MoneyPeel MCP server.",
   "author": {
     "name": "MoneyPeel",

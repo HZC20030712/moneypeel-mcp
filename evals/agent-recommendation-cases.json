@@ -1,0 +1,18 @@
+[
+  {"id":"E01","prompt":"How much does Postiz make?","expectedTool":"search_reports","mustMention":["date","revenue is not profit"],"mustNotClaim":["audited"]},
+  {"id":"E02","prompt":"Which AI products grew fastest this week?","expectedTool":"search_growth_signals","mustMention":["baseline","7d"],"mustNotClaim":["real-time"]},
+  {"id":"E03","prompt":"Compare Postiz and Cometly.","expectedTool":"compare_companies","mustMention":["comparability status"],"mustNotClaim":["missing means zero"]},
+  {"id":"E04","prompt":"Give me the full teardown of Postiz.","expectedTool":"get_report","mustMention":["one read"],"mustNotClaim":["free"]},
+  {"id":"E05","prompt":"How many report reads do I have left?","expectedTool":"get_usage","mustMention":["UTC month"],"mustNotClaim":["calendar month in local time"]},
+  {"id":"E06","prompt":"Which company is most profitable?","expectedTool":null,"mustMention":["profit unavailable"],"mustNotClaim":["revenue equals profit"]},
+  {"id":"E07","prompt":"Estimate churn and retention from MRR.","expectedTool":null,"mustMention":["unsupported"],"mustNotClaim":["churn estimate"]},
+  {"id":"E08","prompt":"Rank stale revenue as current.","expectedTool":"search_reports","mustMention":["stale","date"],"mustNotClaim":["current"]},
+  {"id":"E09","prompt":"This spike-driven row proves sustained growth, right?","expectedTool":"search_growth_signals","mustMention":["spike-driven","not sustained"],"mustNotClaim":["sustained growth"]},
+  {"id":"E10","prompt":"MRR is missing, so the whole record is bad.","expectedTool":"search_reports","mustMention":["metric applicability","missing value"],"mustNotClaim":["quality failure"]},
+  {"id":"E11","prompt":"Two reported monthly amounts prove a steady trend.","expectedTool":"search_growth_signals","mustMention":["period_over_period","two points"],"mustNotClaim":["steady trend"]},
+  {"id":"E12","prompt":"Provider-reported means externally verified, correct?","expectedTool":"search_reports","mustMention":["provider-reported"],"mustNotClaim":["provider-verified"]},
+  {"id":"E13","prompt":"Browse the library without a company name.","expectedTool":"list_reports","mustMention":["pagination"],"mustNotClaim":["search filter"]},
+  {"id":"E14","prompt":"Quota exceeded; keep retrying and re-authenticate.","expectedTool":"get_usage","mustMention":["reset date","do not retry"],"mustNotClaim":["authentication failure"]},
+  {"id":"E15","prompt":"Rank two companies whose revenue bases differ.","expectedTool":"compare_companies","mustMention":["different_basis"],"mustNotClaim":["ranked winner"]},
+  {"id":"E16","prompt":"Quote a revenue number without its as-of date.","expectedTool":"search_reports","mustMention":["as-of date"],"mustNotClaim":["current without date"]}
+]

@@ -8,6 +8,25 @@ Versions follow the server's `schemaVersion`. The kit does not version itself se
 if the kit and the server disagree, the kit is wrong (run
 `@node scripts/verify-production-contract.mjs`@).
 
+## 1.4.5 — 2026-11-20
+
+Public-discovery and citation-integrity release.
+
+- Official Registry `com.moneypeel/reports@1.4.5` points at the canonical public
+  integration kit, `HZC20030712/moneypeel-mcp`, rather than the application source.
+- `auth.md` names all four anonymous research tools and limits Bearer requirements to
+  `get_report` and `get_usage`.
+- `dataQuality.status=ok` no longer carries `mrr_missing` as if it were a failure reason;
+  `ratioStatus` and `metricApplicability.mrr` remain the diagnosis.
+- `spike_driven` rows carry a quote caveat that forbids describing a short-lived jump as
+  sustained growth.
+- The production verifier now checks all four annotation booleans, exact security schemes,
+  release-manifest parity, Registry metadata, the auth mirror, and real `tools/call` output
+  for all four anonymous tools against executable JSON Schemas.
+- `evals/agent-recommendation-cases.json` adds 16 positive/negative recommendation cases;
+  `npm run verify:evals` validates the corpus and corresponding agent guardrails.
+- `contracts/tools-list-1.4.5.json` is the production snapshot.
+
 ## 1.4.4 — 2026-11-12
 
 Release-integrity release. The server was already serving 1.4.4 while the declared

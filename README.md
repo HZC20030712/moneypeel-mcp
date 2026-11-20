@@ -5,7 +5,7 @@ Cursor or Codex — and get an answer with a date on it.**
 
 MoneyPeel is a remote [Model Context Protocol](https://modelcontextprotocol.io)
 server with structured business intelligence on 700+ small software products:
-provider-verified revenue signals, MRR bands, growth, pricing models, how each
+provider-reported revenue signals, MRR bands, growth, pricing models, how each
 one acquires customers, and a written teardown per product.
 
 This repository is the **integration kit**: skills, per-client setup, install
@@ -18,13 +18,13 @@ reviewer or another agent needs to check.
 [![REST API key: none](https://img.shields.io/badge/REST_API_key-none-15803d)](https://moneypeel.com/auth.md)
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-lightgrey)](LICENSE)
 [![contract: drift-tested](https://img.shields.io/badge/contract-drift--tested-0e7490)](contracts/)
-[![server: 1.4.4](https://img.shields.io/badge/server-1.4.4-1f2937)](https://moneypeel.com/.well-known/mcp/release.json)
+[![server: 1.4.5](https://img.shields.io/badge/server-1.4.5-1f2937)](https://moneypeel.com/.well-known/mcp/release.json)
 [![registry: published](https://img.shields.io/badge/registry-com.moneypeel%2Freports-0e7490)](https://registry.modelcontextprotocol.io/v0.1/servers?search=com.moneypeel%2Freports)
 [![basis rules: 2026-11-10.1](https://img.shields.io/badge/basis_rules-2026--11--10.1-6b7280)](https://moneypeel.com/method)
 
 **English** · [简体中文](#中文)
 
-> **Synced with server `1.4.4` / economic-basis rules `2026-11-10.1`** (2026-11-12).
+> **Synced with server `1.4.5` / economic-basis rules `2026-11-10.1`** (2026-11-20).
 > When the server's contract changes, this kit and the dataset READMEs have to change
 > with it — the list of files and the check order lives in
 > `MCP 增长数据开源计划/07-开源同步清单.md` on the site repo. If the two badges above
@@ -47,7 +47,7 @@ reviewer or another agent needs to check.
 | Tool | Account | Cost | Returns |
 |---|---|---|---|
 | `search_reports` | no | free | summary rows: revenue, MRR, growth, pricing model, data date, evidence labels, preview + full-report URLs |
-| `list_reports` | no | free | the same rows, paged and filterable |
+| `list_reports` | no | free | the same rows, paged and sortable |
 | `search_growth_signals` | no | free | 7d / 30d moves on one metric: baseline, absolute change, percentage, data points, window dates, methodology |
 | `compare_companies` | no | free | 2–5 products cell by cell, each `comparable` / `partial` / `not_available` / `different_basis` |
 | `get_report` | yes | **1 read** | one full report, or a single chapter |
@@ -172,15 +172,16 @@ not retry.
 - **Every figure carries a date.** `revenueAsOf` is the day the number belongs
   to; `dataThrough` is how far the dataset reaches; `dataFreshness` is how far
   behind the daily schedule that is. Never call it "current".
-- **Revenue is not profit.** A figure can be provider-verified and still be a GMV
+- **Revenue is not profit.** A figure can be provider-reported and still be a GMV
   total. `revenueBasis` says what it measures (subscription charges, usage
   charges, service billings, platform fee, GMV, gross payment volume, merchant
   sales, one-time sales, unknown).
 - **`dataQuality` is per row, and growth rows carry it too.** When it is
   `needs_review`, the 30-day amount and the MRR disagree by an order of magnitude —
   say so before quoting. A growth signal row adds a ready-made `quoteCaveat` for
-  exactly that case, and it is printed before the numbers: `provider_reported`
-  evidence and a `current` freshness do not clear a quality warning.
+  that case and for `spike_driven` moves, and it is printed before the numbers:
+  `provider_reported` evidence and a `current` freshness do not clear a quality
+  warning, and a short-lived jump must not be called sustained growth.
 - **A 30-day growth move is `period_over_period`.** The source reports two
   amounts, so `windowBasis` is `source_reported` and `dataPoints` is 2; the
   window dates are `null` rather than invented. Only a 7-day daily series can be
@@ -306,7 +307,7 @@ MoneyPeel 是一个远端 MCP 服务，收录 700+ 家小型软件产品的结�
 
 `search_growth_signals` 按 7 天 / 30 天窗口排某个指标的变动，每行带基数、绝对增量、百分比与数据点数；`compare_companies` 比 2–5 家，逐格标 `comparable` / `partial` / `not_available` / `different_basis`，不同经济口径之间不排名。
 
-增长行自带 `dataQuality`；`needs_review` 的行还会带 `quoteCaveat`，**引用时先把这句警告放在数字前面**——`provider_reported` 和 `current` 都不能抵消质量警告。30 天变化来自源报告的两期金额（`windowBasis=source_reported`、`dataPoints=2`、窗口日期为 `null`），因此只能是 `period_over_period`；只有 7 天逐日序列才可能被判成 `sustained_growth` 或 `spike_driven`。规则集版本在 `source.growthRuleVersion`。
+增长行自带 `dataQuality`；`needs_review` 或 `spike_driven` 的行还会带 `quoteCaveat`，**引用时先把这句警告放在数字前面**——`provider_reported` 和 `current` 都不能抵消质量警告，短时跳升也不能说成持续增长。30 天变化来自源报告的两期金额（`windowBasis=source_reported`、`dataPoints=2`、窗口日期为 `null`），因此只能是 `period_over_period`；只有 7 天逐日序列才可能被判成 `sustained_growth` 或 `spike_driven`。规则集版本在 `source.growthRuleVersion`。
 
 `get_report` 返回的 `claims[]` 每条都有稳定的 `claimId`、`claimType`、该行实际语言的 `language` 与 `fallback` 标记；标成「事实」但属于因果/利润/现金流断言的句子，读取时已降级为 `interpretation`，不要自行升格。
 

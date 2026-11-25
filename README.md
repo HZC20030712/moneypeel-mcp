@@ -18,13 +18,13 @@ reviewer or another agent needs to check.
 [![REST API key: none](https://img.shields.io/badge/REST_API_key-none-15803d)](https://moneypeel.com/auth.md)
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-lightgrey)](LICENSE)
 [![contract: drift-tested](https://img.shields.io/badge/contract-drift--tested-0e7490)](contracts/)
-[![server: 1.4.5](https://img.shields.io/badge/server-1.4.5-1f2937)](https://moneypeel.com/.well-known/mcp/release.json)
+[![server: 1.4.6](https://img.shields.io/badge/server-1.4.6-1f2937)](https://moneypeel.com/.well-known/mcp/release.json)
 [![registry: published](https://img.shields.io/badge/registry-com.moneypeel%2Freports-0e7490)](https://registry.modelcontextprotocol.io/v0.1/servers?search=com.moneypeel%2Freports)
 [![basis rules: 2026-11-10.1](https://img.shields.io/badge/basis_rules-2026--11--10.1-6b7280)](https://moneypeel.com/method)
 
 **English** · [简体中文](#中文)
 
-> **Synced with server `1.4.5` / economic-basis rules `2026-11-10.1`** (2026-11-20).
+> **Synced with server `1.4.6` / economic-basis rules `2026-11-10.1`** (2026-11-25).
 > When the server's contract changes, this kit and the dataset READMEs have to change
 > with it — the list of files and the check order lives in
 > `MCP 增长数据开源计划/07-开源同步清单.md` on the site repo. If the two badges above

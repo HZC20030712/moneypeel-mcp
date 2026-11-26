@@ -1,0 +1,54 @@
+name: authenticated read checks
+
+# 2026-11-26 audit §5.2 CI-04: the anonymous workflow can only reach the free
+# tools. This separate workflow exercises the account path — get_usage and
+# exactly one get_report read — with a dedicated test account, and is manual +
+# daily so a broken secret cannot fail every PR.
+#
+# Budget: every run executes at most ONE metered get_report read (MONEYPEEL_REPORT_SLUG).
+# It never retries a metered call: the verifier has no automatic retry.
+#
+# Required repository secrets:
+#   MONEYPEEL_MCP_BEARER_TOKEN  dedicated test account / connection credential (mp_...)
+#   MONEYPEEL_REPORT_SLUG       a stable report slug to read exactly once
+# When the token is absent the run must be green but the summary says
+# "SKIP (NOT VERIFIED)" — an unconfigured credential is not a passing check.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '41 4 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  authenticated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install verifier dependencies
+        run: npm ci
+      - name: Verify authenticated outputs (get_usage + exactly one get_report)
+        env:
+          MONEYPEEL_MCP_BEARER_TOKEN: ${{ secrets.MONEYPEEL_MCP_BEARER_TOKEN }}
+          MONEYPEEL_REPORT_SLUG: ${{ secrets.MONEYPEEL_REPORT_SLUG }}
+        run: |
+          set -euo pipefail
+          if [ -z "${MONEYPEEL_MCP_BEARER_TOKEN:-}" ]; then
+            {
+              echo "### Authenticated MCP checks: SKIP (NOT VERIFIED)"
+              echo ""
+              echo "MONEYPEEL_MCP_BEARER_TOKEN is not configured. get_usage and get_report"
+              echo "outputs are NOT VERIFIED by this run — this is not a pass."
+              echo "Required secrets: MONEYPEEL_MCP_BEARER_TOKEN, MONEYPEEL_REPORT_SLUG."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "SKIP authenticated checks — no MONEYPEEL_MCP_BEARER_TOKEN secret configured; NOT VERIFIED."
+            exit 0
+          fi
+          node scripts/verify-production-contract.mjs --auth-only --authenticated --spend | tee -a "$GITHUB_STEP_SUMMARY"

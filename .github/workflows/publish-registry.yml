@@ -1,0 +1,86 @@
+name: publish registry
+
+# Release-chain follow-through for the official MCP Registry entry
+# (com.moneypeel/reports). The manifest lives in server.json and the version in it
+# must equal the live server version, so this runs after a GitHub release or can be
+# dispatched by hand after a deploy.
+#
+# Credentials: the Registry signs a namespace claim with a private key, verified
+# either by a DNS TXT record or by the HTTP well-known record that moneypeel.com
+# already serves at /.well-known/mcp-registry-auth. Put the seed hex in the
+# MCP_REGISTRY_PRIVATE_KEY repository secret. Without it the job SKIPs (it does not
+# fail), so a missing secret never turns into a red release.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install verifier dependencies
+        run: npm ci
+      - name: Read the manifest version
+        id: manifest
+        run: |
+          version=$(node -e "console.log(require('./server.json').version)")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "server.json version: $version"
+      - name: Check the secret is configured
+        id: credentials
+        env:
+          KEY: ${{ secrets.MCP_REGISTRY_PRIVATE_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::MCP_REGISTRY_PRIVATE_KEY is not set - skipping the Registry publish (not a failure)."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Download mcp-publisher
+        if: steps.credentials.outputs.configured == 'true'
+        run: |
+          curl -sSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher-linux-amd64.tar.gz" -o mcp-publisher.tar.gz
+          tar xzf mcp-publisher.tar.gz mcp-publisher
+          ./mcp-publisher --version
+      - name: Validate the manifest
+        if: steps.credentials.outputs.configured == 'true'
+        run: ./mcp-publisher validate
+      - name: Log in and publish
+        if: steps.credentials.outputs.configured == 'true'
+        env:
+          KEY: ${{ secrets.MCP_REGISTRY_PRIVATE_KEY }}
+        run: |
+          ./mcp-publisher login http --domain moneypeel.com --private-key "$KEY"
+          ./mcp-publisher publish
+      - name: Verify the Registry record
+        if: steps.credentials.outputs.configured == 'true'
+        env:
+          VERSION: ${{ steps.manifest.outputs.version }}
+        run: |
+          node -e "
+            const version = process.env.VERSION;
+            fetch('https://registry.modelcontextprotocol.io/v0.1/servers?search=' + encodeURIComponent('com.moneypeel/reports'))
+              .then((r) => r.json())
+              .then((j) => {
+                const hit = (j.servers || []).find((s) => s._meta?.['io.modelcontextprotocol.registry/official']?.isLatest === true);
+                if (!hit) throw new Error('no latest Registry record');
+                console.log('latest', hit.server.name + '@' + hit.server.version);
+                if (hit.server.version !== version) throw new Error('Registry latest ' + hit.server.version + ' != manifest ' + version);
+              });
+          "
+      - name: Skipped
+        if: steps.credentials.outputs.configured != 'true'
+        run: |
+          echo "Registry publish skipped: configure MCP_REGISTRY_PRIVATE_KEY to enable it."

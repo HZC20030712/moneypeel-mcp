@@ -1,9 +1,9 @@
 # Production contract snapshots
 
-One file per released server version: `@tools-list-<version>.json`@, captured from the live
-`@tools/list`@. Generated, never hand-written.
+One file per released server version: `tools-list-<version>.json`, captured from the live
+`tools/list`. Generated, never hand-written.
 
-Current: `tools-list-1.4.5.json` (2026-11-20). Historical snapshots stay immutable.
+Current: `tools-list-1.4.7.json` (2026-11-26). Historical snapshots stay immutable.
 
 ## Why
 
@@ -15,34 +15,34 @@ other artefact believes it serves.
 
 A committed snapshot makes the served contract reviewable after the fact — tool names,
 descriptions, input parameters, declared output fields, annotations and per-tool
-`securitySchemes` — and gives `@scripts/verify-production-contract.mjs --check`@ something
+`securitySchemes` — and gives `scripts/verify-production-contract.mjs --check` something
 exact to compare against, so a silent contract change fails CI instead of shipping.
 
 ## Generate (after a deploy)
 
-`@bash
+`bash
 node scripts/verify-production-contract.mjs --write
-`@
+`
 
-Then commit the new file together with the version bump in `package.json`@ / `plugin.json`@.
+Then commit the new file together with the version bump in `package.json` / `plugin.json`.
 
 ## Check (what CI runs)
 
-`@bash
+`bash
 node scripts/verify-production-contract.mjs
-`@
+`
 
 It reads the live endpoint (initialize + tools/list only — it never spends a read) and fails
 when:
 
-- the server, `package.json`@ and `plugin.json`@ disagree on the version;
+- the server, `package.json` and `plugin.json` disagree on the version;
 - the tool set is not the six documented tools;
 - any tool's declared `outputSchema` is missing, or its `schemaVersion` const does not
   equal the version the server reports;
 - the four annotation booleans or per-tool security schemes are not stated correctly;
-- `@.well-known/mcp/release.json`@ describes a different version or tool count;
+- `.well-known/mcp/release.json` describes a different version or tool count;
 - the committed snapshot differs from production (contract drift);
-- `README.md`@, `SKILL.md`@ or `docs/auth.md`@ stop agreeing on tools and auth;
+- `README.md`, `SKILL.md` or `docs/auth.md` stop agreeing on tools and auth;
 - real anonymous `tools/call` output fails its declared JSON Schema;
 - the official Registry latest record points at another version or repository.
 

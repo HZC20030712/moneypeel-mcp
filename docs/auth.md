@@ -2,7 +2,7 @@
   Mirrored from https://moneypeel.com/auth.md — that URL is canonical and is
   generated from the server code, so this copy is a convenience for readers of
   the repository, not a second source of truth. If they disagree, the live one
-  wins. Synced 2026-11-20 (server 1.4.5).
+  wins. Synced 2026-11-26 (server 1.4.7).
 -->
 
 > Live: https://moneypeel.com/auth.md

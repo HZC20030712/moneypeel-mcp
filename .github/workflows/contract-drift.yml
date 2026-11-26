@@ -4,6 +4,10 @@ name: contract drift
 # done when source -> declared contract -> production -> package all agree. This job is the
 # part of that chain that can run without any credentials, so it runs on every change and
 # on a daily schedule (a server deploy can happen without a commit in this repository).
+#
+# 2026-11-26 audit §5.2 CI-10: Node 20 is end-of-life on GitHub Actions; this workflow uses
+# actions/checkout@v5 + actions/setup-node@v5 with Node 22. Branch protection remains a
+# manual repository setting — see docs/verifier-notes.md.
 
 on:
   push:
@@ -16,19 +20,28 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: contract-drift-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
       - name: Install verifier dependencies
         run: npm ci
-      - name: Verify the live contract against the committed snapshot
-        run: node scripts/verify-production-contract.mjs --base=https://moneypeel.com
-      - name: Verify the agent recommendation eval corpus
+      - name: Verify the live contract, fixtures and snapshot (read-only, free)
+        run: npm run verify:mcp
+      - name: Static eval corpus lint (NOT model behaviour)
         run: npm run verify:evals
+      - name: Model behaviour evals (SKIP and say so without a pinned model key)
+        env:
+          MONEYPEEL_MODEL_EVAL_API_KEY: ${{ secrets.MONEYPEEL_MODEL_EVAL_API_KEY }}
+          MONEYPEEL_MODEL_EVAL_MODEL: ${{ vars.MONEYPEEL_MODEL_EVAL_MODEL }}
+        run: node scripts/verify-model-evals.mjs

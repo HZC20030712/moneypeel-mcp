@@ -1,4 +1,20 @@
 #!/usr/bin/env node
+/**
+ * STATIC CORPUS LINT for the agent recommendation eval set.
+ *
+ * This is NOT a model behaviour test (2026-11-26 audit §5.3 / EVAL-01): it reads
+ * evals/agent-recommendation-cases.json, checks that every case is well formed,
+ * and checks that SKILL.md still contains the guardrail language the cases
+ * assume. It never calls a model, never chooses a tool and never asserts on an
+ * answer, so its lines are labelled CORPUS_OK and its summary is corpus_ok —
+ * printing PASS here would claim behaviour evidence this script does not have.
+ *
+ * Real model behaviour lives in scripts/verify-model-evals.mjs. That script
+ * reports SKIP (NOT VERIFIED) when no model API key/version is configured.
+ *
+ * Usage: npm run verify:evals
+ * Exit codes: 0 corpus lint OK, 1 a corpus problem.
+ */
 
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -45,10 +61,11 @@ for (const [name, pattern] of guardrails) {
   if (!pattern.test(skill)) failures.push(`SKILL.md lacks ${name}`);
 }
 
+console.log('static corpus lint — no model is called; behaviour is NOT verified by this script');
 for (const item of cases) {
-  console.log(`PASS ${item.id} ${item.expectedTool ?? 'refuse'} — ${item.prompt}`);
+  console.log(`CORPUS_OK ${item.id} ${item.expectedTool ?? 'refuse'} — ${item.prompt}`);
 }
-console.log(`\nsummary: cases=${cases.length} fail=${failures.length}`);
+console.log(`\nsummary: corpus_ok=${cases.length} fail=${failures.length} (static corpus lint only; model behaviour is NOT VERIFIED here)`);
 if (failures.length) {
   for (const failure of failures) console.error(`FAIL ${failure}`);
   process.exit(1);

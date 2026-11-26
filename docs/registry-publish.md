@@ -52,6 +52,13 @@ a single failing check instead of silent drift.
 ## Current state (2026-11-26)
 
 - Registry latest: `com.moneypeel/reports@1.4.5` → `HZC20030712/moneypeel-mcp`.
-- `server.json` here is **1.4.6**; the 1.4.6 record is published by the workflow once the
-  secret exists (or by hand with the commands above). Until then the verifier's R11 check
-  reports the 1.4.5 record — that is the expected state, not a contract bug.
+- `server.json` here is **1.4.7**; publishing it is the only failing check in
+  `npm run verify:mcp` (R11).
+- **Blocker:** the namespace key was rotated on 2026-11-20 (the live record is
+  `p=v id/w2fc6…`, the pre-rotation seed only signs for `p=ldokdF6k…`), so a login
+  with the old seed fails `signature verification failed (tried published key id/w2fc6)`.
+  Publishing needs the **current private seed** (or a new pair plus a re-deploy of
+  `/.well-known/mcp-registry-auth`, which is a production change and out of scope here).
+- Fix path once the seed exists: set the `MCP_REGISTRY_PRIVATE_KEY` repository secret and
+  run the workflow, or export it locally and run the commands above, then re-run
+  `npm run snapshot` so the snapshot's provenance flips to approved.

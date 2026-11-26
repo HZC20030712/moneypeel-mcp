@@ -49,6 +49,51 @@ The latest record must show the version in `server.json` and the kit repository.
 verifier checks the same thing as R11, so a version bump that skips the Registry shows up as
 a single failing check instead of silent drift.
 
+## Status: **BLOCKED** — 1.4.7 Registry record not published (2026-11-26)
+
+**The only blocker:** the namespace signing key was rotated on 2026-11-20 for the 1.4.5
+correction. The live well-known record is `p=id/w2fc6YfL6Zl8U3LcwLbg4HDeXr3GzEntQa1xXVGU=`;
+the seed kept in `.local-secrets/mcp-registry-key.local` is the **pre-rotation** seed
+(`p=ldokdF6kysF9XUcTlP/iZvvx1zVpsLpJ8F1XE7sokt8=`). Logging in with it returns
+`signature verification failed (tried published key ed25519:id/w2fc6)`, so no publish is possible from
+this checkout. Do **not** report the 1.4.7 record as live: the Registry still lists 1.4.5.
+
+**Required from the owner:** provide the **current** Ed25519 seed (64 hex) that matches
+the live record, either as the repository secret `MCP_REGISTRY_PRIVATE_KEY` or in
+`.local-secrets/mcp-registry-key.local`. (Rotating the pair instead requires changing
+`app/src/lib/mcp-registry-auth.ts` and deploying it — a production change, not part of this repo.)
+
+**Steps once the seed exists**
+
+1. Set the secret: GitHub → Settings → Secrets and variables → Actions →
+   `MCP_REGISTRY_PRIVATE_KEY` = the 64-hex seed (or keep it local only).
+2. Publish — dispatch the workflow (Actions → publish registry → Run workflow), or run locally:
+
+```bash
+cd repos/moneypeel-mcp
+npx --yes mcp-publisher validate
+mcp-publisher login http --domain moneypeel.com --private-key <current-seed>
+mcp-publisher publish
+```
+
+3. Verify the record (the same query R11 uses):
+
+```bash
+curl -s "https://registry.modelcontextprotocol.io/v0.1/servers?search=com.moneypeel%2Freports" | \
+  python -c "import json,sys; j=json.load(sys.stdin); print([(s['server']['version'], s['_meta']['io.modelcontextprotocol.registry/official']['isLatest']) for s in j['servers']])"
+```
+
+   Expected: latest tuple = `('1.4.7', True)`, status `active`, remote
+   `https://moneypeel.com/mcp`, repository `HZC20030712/moneypeel-mcp`.
+4. Refresh the snapshot so its provenance flips to approved, then commit it:
+
+```bash
+npm run snapshot      # approved only when every check passes
+```
+
+5. Re-run `npm run verify:mcp`; R11 turns PASS and the contract-drift workflow goes
+   green on the next push/schedule.
+
 ## Current state (2026-11-26)
 
 - Registry latest: `com.moneypeel/reports@1.4.5` → `HZC20030712/moneypeel-mcp`.
